@@ -16,7 +16,7 @@ Extraído de uma arquitetura validada em produção (dev e prod), generalizada a
 
 ```xml
 <dependency>
-    <groupId>io.github.kevindsousa</groupId>
+    <groupId>io.github.trilhalog</groupId>
     <artifactId>trilha-log</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 </dependency>
@@ -155,7 +155,7 @@ class LoginServiceTest {
 
 ## Decisões de projeto
 
-- **GroupId**: `io.github.kevindsousa` — convenção de reverse-domain pra autor sem domínio próprio (Sonatype/Maven Central recomenda `io.github.<usuario>` nesse caso).
+- **GroupId**: `io.github.trilhalog` — convenção de reverse-domain pra autor sem domínio próprio (Sonatype/Maven Central recomenda `io.github.<usuario>` nesse caso).
 - **Spring Boot**: só 3.x / Jakarta EE. Sem suporte a 2.x/`javax.*`.
 - **Módulos**: módulo único por enquanto. Ver [issue sobre split core/web/test-support](../../issues) se o projeto crescer.
 - **Publicação**: por ora, só via `mvn install` no repositório Maven local (`~/.m2`). Nenhum repositório remoto configurado ainda.

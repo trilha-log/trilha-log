@@ -11,14 +11,14 @@
         <relativePath/>
     </parent>
 
-    <groupId>io.github.kevindsousa</groupId>
+    <groupId>io.github.trilhalog</groupId>
     <artifactId>trilha-log</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>trilha-log</name>
     <description>Logging estruturado (Log4j2 + JSON) com correlacao de requisicao, AOP de entrada/saida/excecao e mascaramento de dados sensiveis, como starter Spring Boot</description>
-    <url>https://github.com/kevinDsousa/trilha-log</url>
+    <url>https://github.com/trilha-log/trilha-log</url>
 
     <properties>
         <java.version>17</java.version>
