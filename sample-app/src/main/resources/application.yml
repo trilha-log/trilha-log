@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: trilha-log-sample-app
+
+trilha-log:
+  masking:
+    extra-keywords:
+      - cpf

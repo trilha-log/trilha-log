@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="ConsoleDev" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} traceId=%X{traceId} callChain=%X{callChain} -- %msg%n%throwable"/>
+        </Console>
+        <Console name="ConsoleJson" target="SYSTEM_OUT">
+            <JsonTemplateLayout eventTemplateUri="classpath:trilha-log/log4j2-json-template.json"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <SpringProfile name="!prod">
+                <AppenderRef ref="ConsoleDev"/>
+            </SpringProfile>
+            <SpringProfile name="prod">
+                <AppenderRef ref="ConsoleJson"/>
+            </SpringProfile>
+        </Root>
+    </Loggers>
+</Configuration>
