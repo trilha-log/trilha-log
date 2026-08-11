@@ -20,9 +20,33 @@
     <description>Logging estruturado (Log4j2 + JSON) com correlacao de requisicao, AOP de entrada/saida/excecao e mascaramento de dados sensiveis, como starter Spring Boot</description>
     <url>https://github.com/trilha-log/trilha-log</url>
 
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://github.com/trilha-log/trilha-log/blob/main/LICENSE</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/trilha-log/trilha-log</url>
+        <connection>scm:git:https://github.com/trilha-log/trilha-log.git</connection>
+        <developerConnection>scm:git:https://github.com/trilha-log/trilha-log.git</developerConnection>
+    </scm>
+
     <properties>
         <java.version>17</java.version>
     </properties>
+
+    <!-- Publicado no GitHub Packages (Maven registry da org trilha-log) para outros projetos
+         conseguirem resolver a dependência sem precisar de ~/.m2 local — CI e Docker build de
+         quem consome não têm acesso ao Maven local de ninguém. -->
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages — trilha-log</name>
+            <url>https://maven.pkg.github.com/trilha-log/trilha-log</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
         <!-- Core Spring Boot. Exclui spring-boot-starter-logging (Logback): esta lib traz o

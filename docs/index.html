@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>trilha-log — Documentação</title>
+<meta name="description" content="Documentação do trilha-log: logging estruturado para Spring Boot — correlação de requisição, execução via AOP e mascaramento de dados sensíveis.">
+<link rel="icon" href="assets/favicon.ico">
+</head>
+<body>
+<style>
+  :root {
+    --bg: #F6F7F1;
+    --surface: #FFFFFF;
+    --surface-alt: #EDEFE9;
+    --ink: #16232D;
+    --ink-dim: #57646D;
+    --border: rgba(22,35,45,0.12);
+    --border-strong: rgba(22,35,45,0.24);
+    --brand-navy: #0E4975;
+    --brand-navy-soft: rgba(14,73,117,0.11);
+    --brand-orange: #C05F17;
+    --brand-orange-soft: rgba(225,113,36,0.15);
+    --brand-navy-fixed: #0E4975;
+    --brand-orange-fixed: #E17124;
+    --on-brand: #F7F8F3;
+    --danger: #A3271E;
+    --danger-soft: rgba(163,39,30,0.1);
+    --code-ink: #202E38;
+    --shadow: 0 1px 2px rgba(20,28,24,0.05), 0 6px 20px rgba(20,28,24,0.06);
+    --radius: 7px;
+    --sans: ui-sans-serif, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --display: "Century Gothic", ui-rounded, "Segoe UI", var(--sans);
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1720;
+      --surface: #172029;
+      --surface-alt: #1D2731;
+      --ink: #E8ECEE;
+      --ink-dim: #93A1AB;
+      --border: rgba(232,236,238,0.13);
+      --border-strong: rgba(232,236,238,0.24);
+      --brand-navy: #75ACD9;
+      --brand-navy-soft: rgba(117,172,217,0.16);
+      --brand-orange: #F0913F;
+      --brand-orange-soft: rgba(240,145,63,0.18);
+      --on-brand: #F7F8F3;
+      --danger: #E2685D;
+      --danger-soft: rgba(226,104,93,0.14);
+      --code-ink: #DCE3E8;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0F1720;
+    --surface: #172029;
+    --surface-alt: #1D2731;
+    --ink: #E8ECEE;
+    --ink-dim: #93A1AB;
+    --border: rgba(232,236,238,0.13);
+    --border-strong: rgba(232,236,238,0.24);
+    --brand-navy: #75ACD9;
+    --brand-navy-soft: rgba(117,172,217,0.16);
+    --brand-orange: #F0913F;
+    --brand-orange-soft: rgba(240,145,63,0.18);
+    --on-brand: #F7F8F3;
+    --danger: #E2685D;
+    --danger-soft: rgba(226,104,93,0.14);
+    --code-ink: #DCE3E8;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation: none !important; transition: none !important; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--brand-navy); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--brand-orange); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--brand-navy);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  code, pre, kbd {
+    font-family: var(--mono);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  /* ---------- Masthead ---------- */
+
+  .masthead {
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 1.5rem 2.25rem;
+    background:
+      linear-gradient(180deg, var(--brand-orange-soft) 0%, transparent 55%),
+      var(--bg);
+  }
+
+  .masthead-inner {
+    max-width: 74rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+  }
+
+  .logo-icon { width: 3.1rem; height: auto; flex-shrink: 0; }
+
+  .wordmark h1 {
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+
+  .brand-word-navy { color: var(--brand-navy-fixed); }
+  .brand-word-orange { color: var(--brand-orange-fixed); }
+
+  .tagline {
+    max-width: 46rem;
+    font-size: 1.1rem;
+    color: var(--ink-dim);
+    margin: 0;
+  }
+
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    color: var(--ink-dim);
+    background: var(--surface);
+  }
+
+  .masthead-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.4rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.95rem;
+    border-radius: var(--radius);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--border-strong);
+    color: var(--ink);
+    background: var(--surface);
+  }
+
+  .btn.primary {
+    background: var(--brand-navy-fixed);
+    color: var(--on-brand);
+    border-color: var(--brand-navy-fixed);
+  }
+
+  .btn:hover { border-color: var(--brand-navy); color: var(--brand-navy); }
+  .btn.primary:hover { opacity: 0.88; color: var(--on-brand); border-color: var(--brand-navy-fixed); }
+
+  .install-block { max-width: 42rem; }
+
+  /* ---------- Layout ---------- */
+
+  .layout {
+    max-width: 74rem;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: 2.5rem;
+    padding: 2.5rem 1.5rem 5rem;
+    align-items: start;
+  }
+
+  .sidenav {
+    position: sticky;
+    top: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    font-size: 0.88rem;
+    max-height: calc(100vh - 2.5rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  .sidenav-group h4 {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+  }
+
+  .sidenav-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.05rem; }
+
+  .sidenav a {
+    display: block;
+    padding: 0.32rem 0.6rem;
+    border-radius: 6px;
+    color: var(--ink-dim);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+  }
+
+  .sidenav a:hover { color: var(--ink); background: var(--surface-alt); }
+  .sidenav a.active {
+    color: var(--ink);
+    background: var(--surface-alt);
+    border-left-color: var(--brand-navy);
+    font-weight: 600;
+  }
+
+  .content { min-width: 0; display: flex; flex-direction: column; gap: 3.25rem; }
+
+  section { scroll-margin-top: 1.25rem; max-width: 46rem; }
+  section.wide { max-width: none; }
+
+  section h2 {
+    font-size: 1.55rem;
+    margin: 0 0 0.9rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  section h3 { font-size: 1.12rem; margin: 1.6rem 0 0.6rem; }
+
+  section p { color: var(--ink); margin: 0.6rem 0; }
+  section > .eyebrow { display: block; margin-bottom: 0.4rem; }
+
+  .lede { font-size: 1.04rem; color: var(--ink-dim); }
+
+  ul.plain, ol.plain { padding-left: 1.2rem; margin: 0.6rem 0; }
+  ul.plain li, ol.plain li { margin: 0.45rem 0; }
+
+  /* ---------- Cards / callouts ---------- */
+
+  .callout {
+    border: 1px solid var(--border-strong);
+    border-left-width: 3px;
+    border-radius: var(--radius);
+    padding: 0.9rem 1.1rem;
+    background: var(--surface);
+    margin: 1rem 0;
+    font-size: 0.94rem;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .callout-label {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+  .callout.warn { border-left-color: var(--danger); }
+  .callout.warn .callout-label { color: var(--danger); }
+  .callout.note { border-left-color: var(--brand-navy); }
+  .callout.note .callout-label { color: var(--brand-navy); }
+
+  /* ---------- Code blocks ---------- */
+
+  .code {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 0.9rem 0;
+    box-shadow: var(--shadow);
+  }
+
+  .code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+
+  .copy-btn {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--ink-dim);
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+  }
+  .copy-btn:hover { color: var(--ink); border-color: var(--brand-navy); }
+
+  .code pre {
+    margin: 0;
+    padding: 0.9rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    color: var(--code-ink);
+  }
+
+  .code pre code { font-family: var(--mono); white-space: pre; }
+
+  .tok-kw { color: var(--brand-navy); }
+  .tok-str { color: var(--brand-orange); }
+  .tok-com { color: var(--ink-dim); font-style: italic; }
+  .tok-tag { color: var(--brand-navy); }
+
+  .table-wrap { overflow-x: auto; margin: 0.9rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 30rem; }
+  th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+  td code, th code { font-size: 0.84rem; background: var(--surface-alt); padding: 0.1rem 0.35rem; border-radius: 4px; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .pill.trace { color: var(--brand-orange); background: var(--brand-orange-soft); }
+  .pill.chain { color: var(--brand-navy); background: var(--brand-navy-soft); }
+
+  /* ---------- Figures / diagrams ---------- */
+
+  figure.diagram {
+    margin: 1.25rem 0;
+    padding: 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  figure.diagram svg { display: block; width: 100%; height: auto; color: var(--ink); }
+  figure.diagram figcaption {
+    margin-top: 0.7rem;
+    font-size: 0.86rem;
+    color: var(--ink-dim);
+  }
+
+  /* ---------- Footer ---------- */
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 1.5rem 3rem;
+  }
+  footer .footer-inner {
+    max-width: 74rem;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--ink-dim);
+    font-size: 0.88rem;
+  }
+  footer a { color: var(--ink-dim); }
+  footer a:hover { color: var(--brand-navy); }
+
+  /* ---------- Responsive ---------- */
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; padding: 1.75rem 1.25rem 4rem; gap: 1.5rem; }
+    .sidenav {
+      position: static;
+      max-height: none;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: visible;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      gap: 1.25rem;
+    }
+    .sidenav-group ul { flex-direction: row; gap: 0.3rem; }
+    .sidenav-group h4 { display: none; }
+    .sidenav a { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; border-radius: 0; }
+    .sidenav a.active { border-left-color: transparent; border-bottom-color: var(--brand-navy); }
+  }
+</style>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <span class="eyebrow">Spring Boot · Logging estruturado</span>
+    <div class="wordmark">
+      <img class="logo-icon" src="assets/logo-icon.png" width="56" height="49" alt="" />
+      <h1><span class="brand-word-navy">trilha</span><span class="brand-word-orange">log</span></h1>
+    </div>
+    <p class="tagline">Correlação de requisição, execução de método via AOP com breadcrumb de call chain, e mascaramento de dados sensíveis — como starter Spring Boot. Adiciona a dependência, ganha a base pronta.</p>
+    <div class="badge-row">
+      <span class="badge">MIT</span>
+      <span class="badge">Spring Boot 3.x</span>
+      <span class="badge">Java 17+</span>
+      <span class="badge">Log4j2</span>
+    </div>
+    <div class="install-block">
+      <div class="code">
+        <div class="code-head"><span>pom.xml</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;io.github.trilhalog&lt;/groupId&gt;
+    &lt;artifactId&gt;trilha-log&lt;/artifactId&gt;
+    &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+      </div>
+    </div>
+    <div class="masthead-actions">
+      <a class="btn primary" href="https://github.com/trilha-log/trilha-log">Ver no GitHub</a>
+      <a class="btn" href="#instalacao">Instalação completa</a>
+      <a class="btn" href="https://github.com/trilha-log/trilha-log/issues">Issues</a>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="sidenav" aria-label="Navegação da documentação">
+    <div class="sidenav-group">
+      <h4>Começando</h4>
+      <ul>
+        <li><a href="#visao-geral">Visão geral</a></li>
+        <li><a href="#instalacao">Instalação</a></li>
+      </ul>
+    </div>
+    <div class="sidenav-group">
+      <h4>Conceitos</h4>
+      <ul>
+        <li><a href="#trace-id">Correlação de requisição</a></li>
+        <li><a href="#log-execution">Execução via AOP</a></li>
+        <li><a href="#mascaramento">Mascaramento</a></li>
+        <li><a href="#app-log">Eventos de negócio</a></li>
+      </ul>
+    </div>
+    <div class="sidenav-group">
+      <h4>Referência</h4>
+      <ul>
+        <li><a href="#configuracao">Configuração</a></li>
+        <li><a href="#log4j2">Log4j2 &amp; JSON</a></li>
+        <li><a href="#testando">Testando</a></li>
+      </ul>
+    </div>
+    <div class="sidenav-group">
+      <h4>Mais</h4>
+      <ul>
+        <li><a href="#faq">Perguntas &amp; armadilhas</a></li>
+        <li><a href="#contribuindo">Contribuindo</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="content">
+
+    <section id="visao-geral">
+      <span class="eyebrow">01 — Visão geral</span>
+      <h2>O que o trilha-log resolve</h2>
+      <p class="lede">Nasceu de uma arquitetura de logging validada rodando em produção (dev e prod, Log4j2, JSON estruturado) e foi generalizada para qualquer projeto Spring Boot 3.x novo: adiciona a dependência, ganha a base pronta, customiza só o necessário.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Peça</th><th>O que resolve</th></tr></thead>
+          <tbody>
+            <tr><td><code>RequestCorrelationFilter</code></td><td>Um <span class="pill trace">traceId</span> curto por requisição, presente em todo log emitido enquanto ela é processada — inclusive de bibliotecas de terceiros.</td></tr>
+            <tr><td><code>@LogExecution</code></td><td>Log de entrada, saída e exceção de método via AOP, com um breadcrumb de <span class="pill chain">callChain</span> acumulando em chamadas aninhadas.</td></tr>
+            <tr><td><code>@Sensitive</code> / <code>LogMaskingUtil</code></td><td>Mascaramento central: nunca reflete entidade JPA nem coleção/mapa; nunca deixa senha, token etc. em claro.</td></tr>
+            <tr><td><code>AppLog</code></td><td>Log de evento de negócio no meio de um método, onde o AOP não alcança.</td></tr>
+            <tr><td><code>CapturaLogAppender</code></td><td>Captura eventos de log em memória nos seus testes, sem depender de stdout.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Cada peça é registrada por autoconfiguração padrão do Spring Boot 3.x — nada de <code>@Import</code> manual ou component-scan. Cada bean é <code>@ConditionalOnMissingBean</code>, então qualquer peça pode ser sobrescrita registrando seu próprio bean do mesmo tipo.</p>
+    </section>
+
+    <section id="instalacao">
+      <span class="eyebrow">02 — Começando</span>
+      <h2>Instalação</h2>
+      <p>O trilha-log é distribuído via <strong>GitHub Packages</strong> da organização, não Maven Central. O pacote é público, mas o protocolo Maven do GitHub Packages exige um token de qualquer forma.</p>
+
+      <div class="code">
+        <div class="code-head"><span>pom.xml — repositório + dependência</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>&lt;repositories&gt;
+    &lt;repository&gt;
+        &lt;id&gt;github&lt;/id&gt;
+        &lt;url&gt;https://maven.pkg.github.com/trilha-log/trilha-log&lt;/url&gt;
+    &lt;/repository&gt;
+&lt;/repositories&gt;
+
+&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;io.github.trilhalog&lt;/groupId&gt;
+        &lt;artifactId&gt;trilha-log&lt;/artifactId&gt;
+        &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-label">Exclua o Logback</span>
+        <p>trilha-log já traz o motor de logging (Log4j2). Se o seu projeto usa <code>spring-boot-starter-web</code> ou qualquer outro starter que puxe <code>spring-boot-starter-logging</code> (Logback) transitivamente, exclua-o — as duas bindings SLF4J ativas juntas deixam o provider ambíguo no classpath.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span>pom.xml — excluindo o Logback</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+    &lt;exclusions&gt;
+        &lt;exclusion&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-logging&lt;/artifactId&gt;
+        &lt;/exclusion&gt;
+    &lt;/exclusions&gt;
+&lt;/dependency&gt;</code></pre>
+      </div>
+
+      <h3>Credenciais para resolver o pacote</h3>
+      <p>Requer um GitHub PAT (ou <code>gh auth token</code>) com escopo <code>read:packages</code>. Três cenários:</p>
+
+      <h4 style="font-size:0.95rem; margin: 1rem 0 0.4rem;">Build local</h4>
+      <p>Adicione um <code>&lt;server&gt;</code> ao <code>~/.m2/settings.xml</code>:</p>
+      <div class="code">
+        <div class="code-head"><span>~/.m2/settings.xml</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>&lt;settings&gt;
+  &lt;servers&gt;
+    &lt;server&gt;
+      &lt;id&gt;github&lt;/id&gt;
+      &lt;username&gt;SEU_USUARIO_GITHUB&lt;/username&gt;
+      &lt;password&gt;SEU_TOKEN_COM_READ_PACKAGES&lt;/password&gt;
+    &lt;/server&gt;
+  &lt;/servers&gt;
+&lt;/settings&gt;</code></pre>
+      </div>
+
+      <h4 style="font-size:0.95rem; margin: 1rem 0 0.4rem;">Docker</h4>
+      <p>Resolva o token via <strong>BuildKit secret</strong>, nunca via <code>ARG</code>/<code>ENV</code> gravado na imagem:</p>
+      <div class="code">
+        <div class="code-head"><span>shell</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>export GITHUB_ACTOR=seu-usuario-github
+export GITHUB_TOKEN=$(gh auth token)
+
+docker build \
+  --secret id=github_token,env=GITHUB_TOKEN \
+  --build-arg GITHUB_ACTOR=$GITHUB_ACTOR \
+  -t sua-app .</code></pre>
+      </div>
+
+      <h4 style="font-size:0.95rem; margin: 1rem 0 0.4rem;">CI (GitHub Actions)</h4>
+      <p><code>actions/setup-java</code> com <code>server-id: github</code> gera o <code>&lt;server&gt;</code> do <code>settings.xml</code> do runner automaticamente, usando o <code>secrets.GITHUB_TOKEN</code> padrão do workflow — nenhum PAT extra precisa ser cadastrado.</p>
+    </section>
+
+    <section id="trace-id">
+      <span class="eyebrow">03 — Conceitos</span>
+      <h2>Correlação de requisição <span class="pill trace">traceId</span></h2>
+      <p><code>RequestCorrelationFilter</code> gera um <code>traceId</code> curto (8 caracteres) e coloca no MDC/ThreadContext antes de chamar o resto da cadeia de filtros. Roda com <code>@Order(HIGHEST_PRECEDENCE)</code> — antes de qualquer filtro de segurança da aplicação consumidora.</p>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 860 230" role="img" aria-label="Uma requisição HTTP passa pelo RequestCorrelationFilter, que gera o traceId e o grava no MDC antes dos filtros de segurança, controller e services; o traceId acompanha todo o caminho e é removido do MDC só no finally, depois da resposta.">
+          <defs>
+            <marker id="arrowFlow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <polygon points="0,0 10,5 0,10" fill="currentColor"></polygon>
+            </marker>
+          </defs>
+
+          <!-- client node -->
+          <circle cx="45" cy="90" r="24" fill="none" stroke="currentColor" stroke-width="1.4"></circle>
+          <text x="45" y="94" text-anchor="middle" font-size="11">HTTP</text>
+          <line x1="69" y1="90" x2="122" y2="90" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrowFlow)"></line>
+
+          <!-- filter box -->
+          <rect x="124" y="55" width="182" height="70" rx="6" fill="none" stroke="var(--brand-orange)" stroke-width="2"></rect>
+          <text x="215" y="82" text-anchor="middle" font-size="12" font-weight="700">RequestCorrelationFilter</text>
+          <text x="215" y="99" text-anchor="middle" font-size="10.5" fill="var(--brand-orange)">gera traceId → MDC</text>
+          <text x="215" y="113" text-anchor="middle" font-size="9.5" opacity="0.75">@Order(HIGHEST_PRECEDENCE)</text>
+
+          <line x1="306" y1="90" x2="352" y2="90" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrowFlow)"></line>
+
+          <!-- security filters -->
+          <rect x="354" y="55" width="150" height="70" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+          <text x="429" y="86" text-anchor="middle" font-size="11.5">Filtros de</text>
+          <text x="429" y="101" text-anchor="middle" font-size="11.5">segurança</text>
+
+          <line x1="504" y1="90" x2="550" y2="90" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrowFlow)"></line>
+
+          <!-- controller/service -->
+          <rect x="552" y="55" width="160" height="70" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+          <text x="632" y="86" text-anchor="middle" font-size="11.5">Controller</text>
+          <text x="632" y="101" text-anchor="middle" font-size="11.5">/ Service</text>
+
+          <line x1="712" y1="90" x2="758" y2="90" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrowFlow)"></line>
+
+          <!-- response node -->
+          <circle cx="800" cy="90" r="24" fill="none" stroke="currentColor" stroke-width="1.4"></circle>
+          <text x="800" y="94" text-anchor="middle" font-size="10">200</text>
+
+          <!-- traceId thread -->
+          <line x1="150" y1="150" x2="800" y2="150" stroke="var(--brand-orange)" stroke-width="2" stroke-dasharray="3 4"></line>
+          <text x="150" y="140" font-size="10.5" fill="var(--brand-orange)" font-family="ui-monospace, monospace">traceId=a1b2c3d4 · presente em todo log deste caminho</text>
+
+          <!-- cleanup annotation -->
+          <path d="M 800 150 L 800 178 L 215 178 L 215 128" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#arrowFlow)"></path>
+          <text x="507" y="192" text-anchor="middle" font-size="10" opacity="0.75">finally: log de acesso (status, duração, IP) + MDC.remove(traceId)</text>
+        </svg>
+        <figcaption>O <code>traceId</code> é gravado no MDC antes de qualquer filtro de segurança e acompanha todo o resto do processamento — inclusive logs emitidos por Hibernate, Spring Security e outras bibliotecas de terceiro, já que ele vive no MDC/ThreadContext, não em um wrapper de logger. É removido só no <code>finally</code>, depois do log de acesso.</figcaption>
+      </figure>
+
+      <p>Nunca loga corpo ou parâmetros da requisição, em nenhum profile — risco de vazar dado sensível sem mascaramento.</p>
+    </section>
+
+    <section id="log-execution">
+      <span class="eyebrow">03 — Conceitos</span>
+      <h2>Execução via AOP <span class="pill chain">callChain</span></h2>
+      <p><code>@LogExecution</code> pode ser aplicada em classe (vale pra todos os métodos) ou em método (sobrescreve a classe). Quatro atributos:</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Atributo</th><th>Tipo</th><th>Default</th><th>Efeito</th></tr></thead>
+          <tbody>
+            <tr><td><code>level</code></td><td><code>org.slf4j.event.Level</code></td><td><code>DEBUG</code></td><td>Nível dos logs de entrada/saída.</td></tr>
+            <tr><td><code>logArgs</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Loga os argumentos (mascarados).</td></tr>
+            <tr><td><code>logReturn</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Loga o retorno (mascarado).</td></tr>
+            <tr><td><code>logException</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Loga em <code>ERROR</code> antes de relançar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure class="diagram">
+        <svg viewBox="0 0 720 460" role="img" aria-label="LoginController chama LoginService, que chama AutenticacaoService. O callChain no MDC acumula o nome de cada método conforme a chamada aninha. Se AutenticacaoService lança uma exceção, ela é logada em ERROR e relançada sem ser embrulhada, subindo pela mesma pilha até o cliente.">
+          <defs>
+            <marker id="arrowChain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <polygon points="0,0 10,5 0,10" fill="currentColor"></polygon>
+            </marker>
+            <marker id="arrowDanger" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <polygon points="0,0 10,5 0,10" fill="var(--danger)"></polygon>
+            </marker>
+          </defs>
+
+          <!-- Box A -->
+          <rect x="20" y="20" width="260" height="56" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+          <text x="36" y="44" font-size="12" font-weight="700">LoginController.login()</text>
+          <text x="36" y="60" font-size="10" opacity="0.7">sem @LogExecution</text>
+
+          <line x1="90" y1="76" x2="90" y2="112" stroke="var(--brand-navy)" stroke-width="1.6" marker-end="url(#arrowChain)"></line>
+          <text x="100" y="98" font-size="10" fill="var(--brand-navy)">chama</text>
+
+          <!-- Box B -->
+          <rect x="70" y="114" width="300" height="66" rx="6" fill="none" stroke="var(--brand-navy)" stroke-width="1.8"></rect>
+          <text x="86" y="138" font-size="12" font-weight="700">LoginService.login()</text>
+          <text x="86" y="154" font-size="10" opacity="0.75">@LogExecution</text>
+          <text x="86" y="170" font-size="9.5" font-family="ui-monospace, monospace" fill="var(--brand-navy)">callChain = LoginService.login</text>
+
+          <line x1="150" y1="180" x2="150" y2="216" stroke="var(--brand-navy)" stroke-width="1.6" marker-end="url(#arrowChain)"></line>
+          <text x="160" y="202" font-size="10" fill="var(--brand-navy)">chama</text>
+
+          <!-- Box C -->
+          <rect x="130" y="218" width="340" height="66" rx="6" fill="none" stroke="var(--brand-navy)" stroke-width="1.8"></rect>
+          <text x="146" y="242" font-size="12" font-weight="700">AutenticacaoService.autenticar()</text>
+          <text x="146" y="258" font-size="10" opacity="0.75">@LogExecution</text>
+          <text x="146" y="274" font-size="9.5" font-family="ui-monospace, monospace" fill="var(--brand-navy)">callChain = LoginService.login &gt; AutenticacaoService.autenticar</text>
+
+          <!-- exception branch -->
+          <line x1="300" y1="284" x2="300" y2="320" stroke="var(--danger)" stroke-width="1.6" marker-end="url(#arrowDanger)"></line>
+          <text x="310" y="306" font-size="10" fill="var(--danger)">lança exceção</text>
+
+          <rect x="150" y="322" width="300" height="56" rx="6" fill="var(--danger-soft)" stroke="var(--danger)" stroke-width="1.6"></rect>
+          <text x="300" y="346" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--danger)">log ERROR + stack trace completo</text>
+          <text x="300" y="362" text-anchor="middle" font-size="9.5" fill="var(--danger)">no aspecto de AutenticacaoService</text>
+
+          <path d="M 150 350 L 60 350 L 60 76" fill="none" stroke="var(--danger)" stroke-width="1.6" stroke-dasharray="3 4" marker-end="url(#arrowDanger)"></path>
+          <text x="20" y="230" font-size="10" fill="var(--danger)" transform="rotate(-90 20 230)" text-anchor="middle">relança o Throwable original — nunca embrulhado</text>
+
+          <rect x="20" y="392" width="260" height="56" rx="6" fill="none" stroke="var(--danger)" stroke-width="1.6" stroke-dasharray="3 4"></rect>
+          <text x="150" y="416" text-anchor="middle" font-size="11.5" fill="var(--danger)">Resposta de erro ao cliente</text>
+          <text x="150" y="432" text-anchor="middle" font-size="9.5" fill="var(--danger)">stack trace intacta até aqui</text>
+
+          <line x1="60" y1="392" x2="60" y2="384" stroke="var(--danger)" stroke-width="0"></line>
+        </svg>
+        <figcaption>O <code>callChain</code> acumula uma entrada por chamada aninhada (push/pop via MDC). Se <code>AutenticacaoService.autenticar()</code> lançar, o aspecto loga em <code>ERROR</code> e relança o <code>Throwable</code> original sem embrulhar — a mesma exceção sobe pela pilha, preservando a stack trace completa.</figcaption>
+      </figure>
+    </section>
+
+    <section id="mascaramento">
+      <span class="eyebrow">03 — Conceitos</span>
+      <h2>Mascaramento de dados sensíveis</h2>
+      <p><code>LogMaskingUtil.mascarar(nome, valor)</code> é o ponto central, usado pelo aspecto de <code>@LogExecution</code>, pelo <code>AppLog</code> e por qualquer código que precise logar um valor que pode conter dado sensível. A ordem de verificação importa — é avaliada nesta sequência, parando na primeira que casar:</p>
+
+      <ol class="plain">
+        <li><strong>Valor nulo</strong> → retorna <code>null</code>.</li>
+        <li><strong>Nome bate uma palavra-chave sensível</strong> (case-insensitive, <code>contains</code>) → <code>"***"</code>, sem olhar o valor.</li>
+        <li><strong>Tipo simples</strong> (primitivo, <code>CharSequence</code>, <code>Number</code>, <code>Boolean</code>, enum, <code>UUID</code>) → passa direto.</li>
+        <li><strong>Entidade JPA</strong> (anotada <code>@Entity</code>) → vira só <code>"NomeDaClasse(entidade)"</code>, nunca reflete os campos.</li>
+        <li><strong><code>Collection</code>, <code>Map</code> ou array</strong> → vira só o nome do tipo.</li>
+        <li><strong>Qualquer outro objeto</strong> (DTO, record) → reflection rasa: campo <code>@Sensitive</code> ou com nome sensível vira <code>"***"</code>; o resto é formatado como <code>NomeDaClasse{campo=valor}</code>.</li>
+      </ol>
+
+      <h3>Palavras-chave padrão</h3>
+      <p><code>senha</code>, <code>password</code>, <code>token</code>, <code>secret</code>, <code>apikey</code>, <code>api-key</code>, <code>authorization</code>, <code>chave</code> — configuráveis via <code>application.yml</code>:</p>
+
+      <div class="code">
+        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>trilha-log:
+  masking:
+    extra-keywords:
+      - cpf
+      - rg</code></pre>
+      </div>
+
+      <div class="callout note">
+        <span class="callout-label">JPA é opcional</span>
+        <p>A checagem de <code>@Entity</code> usa <em>capability detection</em>: se <code>jakarta.persistence</code> não estiver no classpath, essa regra simplesmente não entra em ação — nenhum <code>NoClassDefFoundError</code>, nenhuma quebra silenciosa das outras regras de mascaramento.</p>
+      </div>
+    </section>
+
+    <section id="app-log">
+      <span class="eyebrow">03 — Conceitos</span>
+      <h2>Eventos de negócio com <code>AppLog</code></h2>
+      <p>Para logar um evento de negócio no meio de um método — onde o AOP de <code>@LogExecution</code> não alcança, já que ele só intercepta borda de entrada/saída, não uma condição no meio da lógica:</p>
+
+      <div class="code">
+        <div class="code-head"><span>AutenticacaoService.java</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>@LogExecution
+@Service
+public class AutenticacaoService {
+
+    private final AppLog appLog;
+
+    public AutenticacaoService(AppLog appLog) {
+        this.appLog = appLog;
+    }
+
+    public boolean autenticar(LoginRequest request) {
+        boolean autenticado = !request.senha().isBlank();
+        if (autenticado) {
+            appLog.info("login bem-sucedido", request);
+        } else {
+            appLog.warn("tentativa de login com senha vazia", request);
+        }
+        return autenticado;
+    }
+}</code></pre>
+      </div>
+
+      <p><code>AppLog</code> usa <code>StackWalker</code> para atribuir o log à classe que de fato chamou — não a própria <code>AppLog</code> — chamado diretamente dentro de cada método público (nunca via helper privado extra, senão o frame conta errado).</p>
+
+      <div class="callout warn">
+        <span class="callout-label">Armadilha comum</span>
+        <p>Nunca passe <code>Map.of(...)</code> como contexto de múltiplos campos. O mascaramento trata <code>Map</code> como "não reflete" (mesma proteção contra coleção lazy) — o resultado vira só o nome da classe do <code>Map</code>, escondendo justamente o dado que você queria logar. Para contexto com mais de um campo, use um <code>record</code> local pequeno.</p>
+      </div>
+    </section>
+
+    <section id="configuracao">
+      <span class="eyebrow">04 — Referência</span>
+      <h2>Configuração</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Propriedade</th><th>Default</th><th>Efeito</th></tr></thead>
+          <tbody>
+            <tr><td><code>trilha-log.correlation.enabled</code></td><td><code>true</code></td><td>Liga/desliga o <code>RequestCorrelationFilter</code>.</td></tr>
+            <tr><td><code>trilha-log.aspect.enabled</code></td><td><code>true</code></td><td>Liga/desliga o <code>LogExecutionAspect</code>.</td></tr>
+            <tr><td><code>trilha-log.masking.extra-keywords</code></td><td><code>[]</code></td><td>Palavras-chave somadas às padrão para mascaramento por nome.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Qualquer peça pode ser trocada por implementação própria: registre um bean do mesmo tipo (<code>AppLog</code>, <code>LogExecutionAspect</code>, <code>RequestCorrelationFilter</code>) — a autoconfiguração recua automaticamente (<code>@ConditionalOnMissingBean</code>).</p>
+    </section>
+
+    <section id="log4j2" class="wide" style="max-width: 52rem;">
+      <span class="eyebrow">04 — Referência</span>
+      <h2>Log4j2 &amp; saída JSON</h2>
+      <p>Configuração de Log4j2 é por aplicação — copie este arquivo para <code>src/main/resources/log4j2-spring.xml</code> do seu projeto. O template JSON com os campos <code>traceId</code>/<code>callChain</code> já vem dentro do jar e é referenciado via <code>classpath:</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span>log4j2-spring.xml</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>&lt;Configuration status="WARN"&gt;
+    &lt;Appenders&gt;
+        &lt;Console name="ConsoleDev" target="SYSTEM_OUT"&gt;
+            &lt;PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} traceId=%X{traceId} callChain=%X{callChain} -- %msg%n%throwable"/&gt;
+        &lt;/Console&gt;
+        &lt;Console name="ConsoleJson" target="SYSTEM_OUT"&gt;
+            &lt;JsonTemplateLayout eventTemplateUri="classpath:trilha-log/log4j2-json-template.json"/&gt;
+        &lt;/Console&gt;
+    &lt;/Appenders&gt;
+    &lt;Loggers&gt;
+        &lt;Root level="INFO"&gt;
+            &lt;SpringProfile name="!prod"&gt;
+                &lt;AppenderRef ref="ConsoleDev"/&gt;
+            &lt;/SpringProfile&gt;
+            &lt;SpringProfile name="prod"&gt;
+                &lt;AppenderRef ref="ConsoleJson"/&gt;
+            &lt;/SpringProfile&gt;
+        &lt;/Root&gt;
+    &lt;/Loggers&gt;
+&lt;/Configuration&gt;</code></pre>
+      </div>
+
+      <p>Em produção, uma linha de log vira:</p>
+      <div class="code">
+        <div class="code-head"><span>saída — profile prod</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>{"timestamp":"2026-08-08T02:32:02.648Z","level":"INFO","traceId":"66678116","callChain":"LoginService.login &gt; AutenticacaoService.autenticar","logger":"...AutenticacaoService","thread":"http-nio-8080-exec-2","message":"login bem-sucedido — LoginRequest{usuario=kevin, senha=***}"}</code></pre>
+      </div>
+      <p>Os campos <code>traceId</code> e <code>callChain</code> somem sozinhos do JSON quando o MDC não tem valor para eles — nunca aparecem como campo vazio.</p>
+      <p><strong>Nível de log</strong> é controlado só por <code>logging.level.*</code> no <code>application-{profile}.yml</code> — essa propriedade do Spring Boot funciona independente do engine de logging por trás. Não editar nível direto no <code>log4j2-spring.xml</code>.</p>
+    </section>
+
+    <section id="testando">
+      <span class="eyebrow">04 — Referência</span>
+      <h2>Testando com <code>CapturaLogAppender</code></h2>
+      <p>Anexa um appender em memória ao root logger para asserir eventos de log sem depender de captura de stdout:</p>
+
+      <div class="code">
+        <div class="code-head"><span>LoginServiceTest.java</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>class LoginServiceTest {
+
+    private final CapturaLogAppender appender = new CapturaLogAppender();
+
+    @BeforeEach
+    void setUp() {
+        appender.anexar();
+    }
+
+    @AfterEach
+    void tearDown() {
+        appender.desanexar();
+    }
+
+    @Test
+    void logaTentativaComSenhaVazia() {
+        // ...
+
+        assertThat(appender.contemMensagem("tentativa de login com senha vazia")).isTrue();
+    }
+}</code></pre>
+      </div>
+
+      <p><code>anexar()</code> força <code>Level.ALL</code> no root logger (não dá pra confiar no nível ambiente quando os testes rodam no mesmo processo Surefire) e <code>desanexar()</code> restaura o nível original salvo.</p>
+    </section>
+
+    <section id="faq">
+      <span class="eyebrow">05 — Mais</span>
+      <h2>Perguntas &amp; armadilhas</h2>
+
+      <h3>traceId aparece em logs de bibliotecas de terceiro?</h3>
+      <p>Sim. Ele vive no MDC/ThreadContext, não em um wrapper de logger — qualquer coisa que logue durante aquela requisição (Hibernate, Spring Security, etc.) carrega o mesmo <code>traceId</code>.</p>
+
+      <h3><code>@LogExecution</code> pode embrulhar a exceção?</h3>
+      <p>Nunca. Sempre relança o <code>Throwable</code> original capturado — nunca um <code>new RuntimeException(e.getMessage())</code> — para que a stack trace completa chegue a quem trata.</p>
+
+      <h3>Qual convenção de nível de log usar no meu projeto?</h3>
+      <p>Sugestão validada em produção: <code>WARN</code> para violação de regra de negócio / uso indevido esperado, <code>DEBUG</code> para ruído comum, <code>ERROR</code> só para falha real de sistema — sempre com stack trace completa no log do servidor, nunca na resposta ao cliente.</p>
+
+      <h3>E se meu projeto não tiver Servlet API no classpath?</h3>
+      <p><code>RequestCorrelationFilter</code> é <code>@ConditionalOnClass(Filter.class)</code> — em uma aplicação sem Servlet API (um worker, por exemplo), o bean simplesmente não é criado, sem erro.</p>
+    </section>
+
+    <section id="contribuindo">
+      <span class="eyebrow">05 — Mais</span>
+      <h2>Contribuindo</h2>
+      <p>trilha-log é open source sob licença <a href="https://github.com/trilha-log/trilha-log/blob/main/LICENSE">MIT</a>. Issues e PRs são bem-vindos.</p>
+      <ul class="plain">
+        <li><code>mvn test</code> roda a suíte completa antes de qualquer PR.</li>
+        <li><code>sample-app/</code> é a aplicação de referência para validar mudanças de ponta a ponta.</li>
+        <li>Discussões de arquitetura maiores (ex.: split em módulos <code>core</code>/<code>web</code>/<code>test-support</code>) ficam registradas como <a href="https://github.com/trilha-log/trilha-log/issues">issues</a> antes de virar código.</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>trilha-log — MIT License</span>
+    <span><a href="https://github.com/trilha-log/trilha-log">github.com/trilha-log/trilha-log</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.sidenav a'));
+  var sections = links
+    .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+    .filter(Boolean);
+
+  if ('IntersectionObserver' in window && sections.length) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var link = links.find ? links.find(function (a) { return a.getAttribute('href') === '#' + entry.target.id; })
+          : null;
+        if (!link) {
+          for (var i = 0; i < links.length; i++) {
+            if (links[i].getAttribute('href') === '#' + entry.target.id) { link = links[i]; break; }
+          }
+        }
+        if (entry.isIntersecting && link) {
+          links.forEach(function (a) { a.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+
+    sections.forEach(function (s) { observer.observe(s); });
+  }
+
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.closest('.code').querySelector('pre');
+      var text = pre ? pre.innerText : '';
+      if (navigator.clipboard && text) {
+        navigator.clipboard.writeText(text).then(function () {
+          var original = btn.textContent;
+          btn.textContent = 'Copiado!';
+          setTimeout(function () { btn.textContent = original; }, 1200);
+        });
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
