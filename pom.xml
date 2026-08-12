@@ -67,10 +67,11 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
-        <!-- AOP: @LogExecution -->
+        <!-- AOP: @LogExecution. spring-boot-starter-aop foi renomeado para
+             spring-boot-starter-aspectj no Spring Boot 4.0. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
 
         <!-- Web: RequestCorrelationFilter (sem puxar spring-boot-starter-web inteiro) -->

@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/github/license/trilha-log/trilha-log)](LICENSE)
 [![Build](https://img.shields.io/github/actions/workflow/status/trilha-log/trilha-log/publish.yml?branch=main)](https://github.com/trilha-log/trilha-log/actions/workflows/publish.yml)
 ![Java](https://img.shields.io/badge/Java-17%2B-blue)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.x-6DB33F)
 
 [📖 Documentação completa](https://trilha-log.github.io/trilha-log/) · [Issues](https://github.com/trilha-log/trilha-log/issues) · [Sample app](sample-app)
 
@@ -15,7 +15,7 @@
 
 ---
 
-Nasceu de uma arquitetura de logging validada em produção (dev e prod, Log4j2, JSON estruturado) e foi generalizada para qualquer projeto Spring Boot 3.x novo. Adiciona a dependência, exclui o Logback, e ganha:
+Nasceu de uma arquitetura de logging validada em produção (dev e prod, Log4j2, JSON estruturado) e foi generalizada para qualquer projeto Spring Boot 4.x novo. Adiciona a dependência, exclui o Logback, e ganha:
 
 - **`traceId` por requisição** — correlaciona todo log de uma mesma requisição, inclusive de bibliotecas de terceiro (Hibernate, Spring Security), via MDC/ThreadContext.
 - **`@LogExecution`** — log automático de entrada/saída/exceção de método via AOP, com breadcrumb de call chain acumulando em chamadas aninhadas. Nunca embrulha a exceção capturada.
@@ -23,7 +23,7 @@ Nasceu de uma arquitetura de logging validada em produção (dev e prod, Log4j2,
 - **`AppLog`** — log de evento de negócio no meio de um método, onde o AOP não alcança.
 - **`CapturaLogAppender`** — captura eventos de log em memória nos seus testes, sem depender de stdout.
 
-Cada peça é registrada por autoconfiguração padrão do Spring Boot 3.x e pode ser sobrescrita (`@ConditionalOnMissingBean`). A documentação completa — conceitos, diagramas, referência de configuração, distribuição via GitHub Packages e armadilhas conhecidas — está em **[trilha-log.github.io/trilha-log](https://trilha-log.github.io/trilha-log/)**.
+Cada peça é registrada por autoconfiguração padrão do Spring Boot 4.x e pode ser sobrescrita (`@ConditionalOnMissingBean`). A documentação completa — conceitos, diagramas, referência de configuração, distribuição via GitHub Packages e armadilhas conhecidas — está em **[trilha-log.github.io/trilha-log](https://trilha-log.github.io/trilha-log/)**.
 
 ## Instalação
 
@@ -104,7 +104,7 @@ Issues e PRs são bem-vindos.
 
 - `mvn test` roda a suíte completa antes de qualquer PR.
 - Discussões de arquitetura maiores (ex.: split em módulos `core`/`web`/`test-support`) ficam registradas como [issue](https://github.com/trilha-log/trilha-log/issues) antes de virar código.
-- Java 17+, Spring Boot 3.x / Jakarta EE apenas — sem suporte a 2.x/`javax.*`.
+- Java 17+, Spring Boot 4.x / Jakarta EE apenas — sem suporte a 2.x/`javax.*`.
 
 ## Licença
 
