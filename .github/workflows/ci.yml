@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Build & test trilha-log
+        run: mvn --batch-mode --no-transfer-progress install
+
+      - name: Compile sample-app (consome trilha-log do repositório Maven local)
+        run: mvn --batch-mode --no-transfer-progress -f sample-app/pom.xml compile
