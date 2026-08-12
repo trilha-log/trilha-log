@@ -41,7 +41,7 @@ trilha-log é distribuído via **GitHub Packages** (não Maven Central). O pacot
     <dependency>
         <groupId>io.github.trilhalog</groupId>
         <artifactId>trilha-log</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </dependency>
 </dependencies>
 ```
