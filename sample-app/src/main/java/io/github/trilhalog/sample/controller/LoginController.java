@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.HtmlUtils;
 
 @RestController
 public class LoginController {
@@ -24,6 +25,6 @@ public class LoginController {
 
     @GetMapping("/saudacao/{nome}")
     public String saudacao(@PathVariable String nome) {
-        return "ola, " + nome;
+        return "ola, " + HtmlUtils.htmlEscape(nome);
     }
 }
