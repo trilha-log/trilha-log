@@ -27,6 +27,8 @@ public class TrilhaLogProperties {
     public static class Correlation {
         /** Liga/desliga o RequestCorrelationFilter (traceId no MDC). */
         private boolean enabled = true;
+        /** Inclui o IP do cliente no log de cada requisicao. Desabilitar em ambientes com requisitos LGPD/GDPR. */
+        private boolean logIp = true;
 
         public boolean isEnabled() {
             return enabled;
@@ -34,6 +36,14 @@ public class TrilhaLogProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+
+        public boolean isLogIp() {
+            return logIp;
+        }
+
+        public void setLogIp(boolean logIp) {
+            this.logIp = logIp;
         }
     }
 
