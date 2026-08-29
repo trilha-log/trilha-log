@@ -68,6 +68,12 @@ public class TrilhaLogProperties {
     public static class Aspect {
         /** Liga/desliga o LogExecutionAspect (@LogExecution). */
         private boolean enabled = true;
+        /**
+         * Numero maximo de frames mantidos no callChain do MDC. 0 sem limite.
+         * Quando ultrapassado, os frames mais antigos sao substituidos por "... >"
+         * para manter o contexto mais recente (onde o erro efetivamente ocorre).
+         */
+        private int maxCallChainFrames = 0;
 
         public boolean isEnabled() {
             return enabled;
@@ -75,6 +81,14 @@ public class TrilhaLogProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+
+        public int getMaxCallChainFrames() {
+            return maxCallChainFrames;
+        }
+
+        public void setMaxCallChainFrames(int maxCallChainFrames) {
+            this.maxCallChainFrames = maxCallChainFrames;
         }
     }
 
