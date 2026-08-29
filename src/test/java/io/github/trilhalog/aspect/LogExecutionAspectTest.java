@@ -1,5 +1,6 @@
 package io.github.trilhalog.aspect;
 
+import io.github.trilhalog.logging.Sensitive;
 import io.github.trilhalog.testsupport.CapturaLogAppender;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
@@ -58,6 +59,13 @@ class LogExecutionAspectTest {
     @LogExecution
     static class ServicoSensivel {
         String autenticar(String usuario, String senha) {
+            return "ok";
+        }
+    }
+
+    @LogExecution
+    static class ServicoComParametroSensivel {
+        String mudarSenha(String login, @Sensitive String novoValor) {
             return "ok";
         }
     }
@@ -126,6 +134,16 @@ class LogExecutionAspectTest {
         ServicoSensivel servico = proxy(new ServicoSensivel());
 
         servico.autenticar("kevin", "supersecreta");
+
+        assertThat(appender.getEventos())
+                .noneMatch(e -> e.getMessage().getFormattedMessage().contains("supersecreta"));
+    }
+
+    @Test
+    void mascaraParametroAnotadoComSensitive() {
+        ServicoComParametroSensivel servico = proxy(new ServicoComParametroSensivel());
+
+        servico.mudarSenha("kevin", "supersecreta");
 
         assertThat(appender.getEventos())
                 .noneMatch(e -> e.getMessage().getFormattedMessage().contains("supersecreta"));
