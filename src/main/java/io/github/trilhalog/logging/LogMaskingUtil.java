@@ -4,6 +4,7 @@ import io.github.trilhalog.logging.jpa.JpaEntityDetector;
 import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InaccessibleObjectException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -116,11 +117,11 @@ public final class LogMaskingUtil {
             if (field.isSynthetic()) {
                 continue;
             }
-            field.setAccessible(true);
             Object valorCampo;
             try {
+                field.setAccessible(true);
                 valorCampo = field.get(valor);
-            } catch (IllegalAccessException e) {
+            } catch (InaccessibleObjectException | IllegalAccessException e) {
                 valorCampo = "<inacessivel>";
             }
             Object valorMascarado = field.isAnnotationPresent(Sensitive.class)
