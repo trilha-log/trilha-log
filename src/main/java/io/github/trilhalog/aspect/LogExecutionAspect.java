@@ -42,7 +42,10 @@ public class LogExecutionAspect {
     @Around("@within(io.github.trilhalog.aspect.LogExecution) || @annotation(io.github.trilhalog.aspect.LogExecution)")
     public Object logExecution(ProceedingJoinPoint joinPoint) throws Throwable {
         Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
-        Class<?> targetClass = joinPoint.getTarget() != null ? joinPoint.getTarget().getClass() : method.getDeclaringClass();
+        Class<?> targetClass = joinPoint.getTarget() != null
+                ? joinPoint.getTarget().getClass()
+                : method.getDeclaringClass();
+
         LogExecution config = resolveConfig(method, targetClass);
 
         Logger logger = LoggerFactory.getLogger(targetClass);
@@ -53,8 +56,11 @@ public class LogExecutionAspect {
 
         try {
             logEntry(logger, config, frame, method, joinPoint.getArgs());
+
             Object result = joinPoint.proceed();
+
             logExit(logger, config, frame, result);
+
             return result;
         } catch (Throwable ex) {
             if (config.logException()) {
@@ -62,6 +68,7 @@ public class LogExecutionAspect {
                         .setCause(ex)
                         .log("x {} lancou {}", frame, ex.getClass().getSimpleName());
             }
+
             throw ex;
         } finally {
             if (previousChain == null) {
@@ -72,58 +79,129 @@ public class LogExecutionAspect {
         }
     }
 
-    private void logEntry(Logger logger, LogExecution config, String frame, Method method, Object[] args) {
+    private void logEntry(
+            Logger logger,
+            LogExecution config,
+            String frame,
+            Method method,
+            Object[] args) {
+
         if (config.logArgs()) {
-            logger.atLevel(config.level()).log("-> {} args={}", frame, maskArgs(method, args));
+            logger.atLevel(config.level())
+                    .log("-> {} args={}", frame, maskArgs(method, args));
         } else {
-            logger.atLevel(config.level()).log("-> {}", frame);
+            logger.atLevel(config.level())
+                    .log("-> {}", frame);
         }
     }
 
-    private void logExit(Logger logger, LogExecution config, String frame, Object result) {
-        if (config.logReturn()) {
-            logger.atLevel(config.level()).log("<- {} return={}", frame, LogMaskingUtil.mascarar("return", result));
+    private void logExit(
+            Logger logger,
+            LogExecution config,
+            String frame,
+            Object result) {
+
+        if (config.logReturn()
+                && !isReturnTypeExcluido(result, config.excludeReturnTypes())) {
+
+            logger.atLevel(config.level())
+                    .log(
+                            "<- {} return={}",
+                            frame,
+                            LogMaskingUtil.mascarar("return", result)
+                    );
         } else {
-            logger.atLevel(config.level()).log("<- {}", frame);
+            logger.atLevel(config.level())
+                    .log("<- {}", frame);
         }
+    }
+
+    /**
+     * Verifica se o tipo concreto do retorno deve ser excluido do log.
+     * <p>
+     * {@link Class#isAssignableFrom(Class)} garante que subclasses e
+     * implementacoes de interfaces tambem sejam consideradas.
+     *
+     * @param result retorno do metodo
+     * @param excluidos tipos que nao devem ter o valor do retorno logado
+     * @return {@code true} quando o tipo do retorno deve ser excluido
+     */
+    private boolean isReturnTypeExcluido(Object result, Class<?>[] excluidos) {
+        if (result == null || excluidos.length == 0) {
+            return false;
+        }
+
+        Class<?> tipo = result.getClass();
+
+        for (Class<?> excluido : excluidos) {
+            if (excluido.isAssignableFrom(tipo)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private String novaChain(String anterior, String frame) {
-        String candidata = anterior == null ? frame : anterior + " > " + frame;
-        if (maxCallChainFrames <= 0) return candidata;
+        String candidata = anterior == null
+                ? frame
+                : anterior + " > " + frame;
+
+        if (maxCallChainFrames <= 0) {
+            return candidata;
+        }
 
         String[] frames = candidata.split(" > ");
-        if (frames.length <= maxCallChainFrames) return candidata;
 
-        String[] recentes = Arrays.copyOfRange(frames, frames.length - maxCallChainFrames, frames.length);
+        if (frames.length <= maxCallChainFrames) {
+            return candidata;
+        }
+
+        String[] recentes = Arrays.copyOfRange(
+                frames,
+                frames.length - maxCallChainFrames,
+                frames.length
+        );
+
         return "... > " + String.join(" > ", recentes);
     }
 
     private LogExecution resolveConfig(Method method, Class<?> targetClass) {
         LogExecution methodConfig = method.getAnnotation(LogExecution.class);
+
         if (methodConfig != null) {
             return methodConfig;
         }
+
         return targetClass.getAnnotation(LogExecution.class);
     }
 
     private String maskArgs(Method method, Object[] args) {
         Parameter[] parameters = method.getParameters();
         StringBuilder sb = new StringBuilder("[");
+
         for (int i = 0; i < args.length; i++) {
             if (i > 0) {
                 sb.append(", ");
             }
+
             if (i < parameters.length) {
                 Parameter param = parameters[i];
+
                 Object mascarado = param.isAnnotationPresent(Sensitive.class)
                         ? "***"
                         : LogMaskingUtil.mascarar(param.getName(), args[i]);
-                sb.append(param.getName()).append("=").append(mascarado);
+
+                sb.append(param.getName())
+                        .append("=")
+                        .append(mascarado);
             } else {
-                sb.append(LogMaskingUtil.mascarar("arg" + i, args[i]));
+                sb.append(
+                        LogMaskingUtil.mascarar("arg" + i, args[i])
+                );
             }
         }
+
         return sb.append("]").toString();
     }
 }
