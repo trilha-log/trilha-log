@@ -87,6 +87,49 @@ class LogMaskingUtilTest {
                 .doesNotContain("supersecreta");
     }
 
+    static class BaseDto {
+        @Sensitive
+        private final String campoSensivel;
+        private final String password;   // keyword — mascarado pelo nome
+
+        BaseDto(String campoSensivel, String password) {
+            this.campoSensivel = campoSensivel;
+            this.password = password;
+        }
+    }
+
+    static class SubDto extends BaseDto {
+        private final String usuario;
+
+        SubDto(String usuario, String campoSensivel, String password) {
+            super(campoSensivel, password);
+            this.usuario = usuario;
+        }
+    }
+
+    @Test
+    void mascaraCampoSensitiveDaSuperclasse() {
+        SubDto dto = new SubDto("kevin", "supersecreta", "hash123");
+
+        Object resultado = LogMaskingUtil.mascarar("dto", dto);
+
+        assertThat(resultado.toString())
+                .contains("usuario=kevin")
+                .contains("campoSensivel=***")
+                .doesNotContain("supersecreta");
+    }
+
+    @Test
+    void mascaraCampoComKeywordDaSuperclasse() {
+        SubDto dto = new SubDto("kevin", "supersecreta", "hash123");
+
+        Object resultado = LogMaskingUtil.mascarar("dto", dto);
+
+        assertThat(resultado.toString())
+                .contains("password=***")
+                .doesNotContain("hash123");
+    }
+
     @Test
     void aplicaPalavrasChaveExtrasConfiguradas() {
         LogMaskingUtil.configurarPalavrasChave(List.of("cpf"));
