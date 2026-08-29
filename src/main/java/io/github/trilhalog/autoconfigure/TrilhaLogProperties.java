@@ -45,6 +45,10 @@ public class TrilhaLogProperties {
          * de cabecalhos de entrada.
          */
         private int traceIdLength = 0;
+        /** Opt-in: loga o corpo da requisicao com mascaramento automatico de campos sensiveis. Default false. */
+        private boolean logRequestBody = false;
+        /** Limite em bytes do corpo logado; trunca payloads grandes. */
+        private int maxBodyLogBytes = 2048;
 
         public boolean isEnabled() {
             return enabled;
@@ -76,6 +80,22 @@ public class TrilhaLogProperties {
 
         public void setTraceIdLength(int traceIdLength) {
             this.traceIdLength = traceIdLength;
+        }
+
+        public boolean isLogRequestBody() {
+            return logRequestBody;
+        }
+
+        public void setLogRequestBody(boolean logRequestBody) {
+            this.logRequestBody = logRequestBody;
+        }
+
+        public int getMaxBodyLogBytes() {
+            return maxBodyLogBytes;
+        }
+
+        public void setMaxBodyLogBytes(int maxBodyLogBytes) {
+            this.maxBodyLogBytes = maxBodyLogBytes;
         }
     }
 
