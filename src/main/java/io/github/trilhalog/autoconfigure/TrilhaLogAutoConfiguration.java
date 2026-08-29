@@ -44,6 +44,9 @@ public class TrilhaLogAutoConfiguration {
     @ConditionalOnProperty(prefix = "trilha-log.correlation", name = "enabled", havingValue = "true", matchIfMissing = true)
     public RequestCorrelationFilter requestCorrelationFilter(TrilhaLogProperties properties) {
         TrilhaLogProperties.Correlation correlation = properties.getCorrelation();
-        return new RequestCorrelationFilter(correlation.isLogIp(), correlation.getIncomingTraceHeaders());
+        return new RequestCorrelationFilter(
+                correlation.isLogIp(),
+                correlation.getIncomingTraceHeaders(),
+                correlation.getTraceIdLength());
     }
 }
