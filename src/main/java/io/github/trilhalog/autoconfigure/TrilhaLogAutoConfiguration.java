@@ -34,8 +34,8 @@ public class TrilhaLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "trilha-log.aspect", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public LogExecutionAspect logExecutionAspect() {
-        return new LogExecutionAspect();
+    public LogExecutionAspect logExecutionAspect(TrilhaLogProperties properties) {
+        return new LogExecutionAspect(properties.getAspect().getMaxCallChainFrames());
     }
 
     @Bean
