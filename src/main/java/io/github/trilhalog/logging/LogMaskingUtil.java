@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,9 +29,23 @@ import java.util.UUID;
  */
 public final class LogMaskingUtil {
 
-    private static final Set<String> DEFAULT_KEYWORDS = Set.of(
-            "senha", "password", "token", "secret", "apikey", "api-key", "authorization", "chave"
-    );
+    private static final Set<String> DEFAULT_KEYWORDS = defaultKeywords();
+
+    private static Set<String> defaultKeywords() {
+        Set<String> kw = new HashSet<>();
+        // autenticação
+        Collections.addAll(kw, "senha", "password", "token", "secret", "apikey", "api-key",
+                "authorization", "chave", "pin", "otp", "cvv", "passphrase");
+        // documentos pessoais (LGPD)
+        Collections.addAll(kw, "cpf", "ssn", "rg", "nif", "passaporte", "passport");
+        // contato / identificação (LGPD)
+        Collections.addAll(kw, "email", "telefone", "phone", "celular", "mobile");
+        // financeiro
+        Collections.addAll(kw, "creditcard", "cartao", "accountnumber");
+        // criptografia
+        Collections.addAll(kw, "privatekey", "signingkey", "encryptionkey");
+        return Set.copyOf(kw);
+    }
 
     private static final boolean JPA_PRESENT = ClassUtils.isPresent(
             "jakarta.persistence.Entity", LogMaskingUtil.class.getClassLoader());
@@ -60,6 +75,10 @@ public final class LogMaskingUtil {
     }
 
     public static Object mascarar(String nome, Object valor) {
+        return mascarar(nome, valor, Collections.newSetFromMap(new IdentityHashMap<>()));
+    }
+
+    private static Object mascarar(String nome, Object valor, Set<Object> visitados) {
         if (valor == null) {
             return null;
         }
@@ -76,7 +95,7 @@ public final class LogMaskingUtil {
         if (valor instanceof Collection || valor instanceof Map || tipo.isArray()) {
             return tipo.getSimpleName();
         }
-        return mascararCampos(valor);
+        return mascararCampos(valor, visitados);
     }
 
     private static boolean isNomeSensivel(String nome) {
@@ -110,7 +129,10 @@ public final class LogMaskingUtil {
         return campos;
     }
 
-    private static String mascararCampos(Object valor) {
+    private static String mascararCampos(Object valor, Set<Object> visitados) {
+        if (!visitados.add(valor)) {
+            return valor.getClass().getSimpleName() + "(circular)";
+        }
         Class<?> tipo = valor.getClass();
         StringJoiner joiner = new StringJoiner(", ", tipo.getSimpleName() + "{", "}");
         for (Field field : todosCampos(tipo)) {
@@ -126,7 +148,7 @@ public final class LogMaskingUtil {
             }
             Object valorMascarado = field.isAnnotationPresent(Sensitive.class)
                     ? "***"
-                    : mascarar(field.getName(), valorCampo);
+                    : mascarar(field.getName(), valorCampo, visitados);
             joiner.add(field.getName() + "=" + valorMascarado);
         }
         return joiner.toString();
