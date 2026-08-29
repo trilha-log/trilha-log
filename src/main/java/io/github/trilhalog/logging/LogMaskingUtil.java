@@ -4,7 +4,10 @@ import io.github.trilhalog.logging.jpa.JpaEntityDetector;
 import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InaccessibleObjectException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -99,18 +102,26 @@ public final class LogMaskingUtil {
                 || valor instanceof UUID;
     }
 
+    private static List<Field> todosCampos(Class<?> tipo) {
+        List<Field> campos = new ArrayList<>();
+        for (Class<?> atual = tipo; atual != null && atual != Object.class; atual = atual.getSuperclass()) {
+            Collections.addAll(campos, atual.getDeclaredFields());
+        }
+        return campos;
+    }
+
     private static String mascararCampos(Object valor) {
         Class<?> tipo = valor.getClass();
         StringJoiner joiner = new StringJoiner(", ", tipo.getSimpleName() + "{", "}");
-        for (Field field : tipo.getDeclaredFields()) {
+        for (Field field : todosCampos(tipo)) {
             if (field.isSynthetic()) {
                 continue;
             }
-            field.setAccessible(true);
             Object valorCampo;
             try {
+                field.setAccessible(true);
                 valorCampo = field.get(valor);
-            } catch (IllegalAccessException e) {
+            } catch (InaccessibleObjectException | IllegalAccessException e) {
                 valorCampo = "<inacessivel>";
             }
             Object valorMascarado = field.isAnnotationPresent(Sensitive.class)
