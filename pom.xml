@@ -17,7 +17,11 @@
     <packaging>jar</packaging>
 
     <name>trilha-log</name>
-    <description>Logging estruturado (Log4j2 + JSON) com correlacao de requisicao, AOP de entrada/saida/excecao e mascaramento de dados sensiveis, como starter Spring Boot</description>
+    <description>
+        Logging estruturado (Log4j2 + JSON) com correlacao de requisicao,
+        AOP de entrada/saida/excecao e mascaramento de dados sensiveis,
+        como starter Spring Boot
+    </description>
     <url>https://github.com/trilha-log/trilha-log</url>
 
     <licenses>
@@ -37,9 +41,7 @@
         <java.version>17</java.version>
     </properties>
 
-    <!-- Publicado no GitHub Packages (Maven registry da org trilha-log) para outros projetos
-         conseguirem resolver a dependência sem precisar de ~/.m2 local — CI e Docker build de
-         quem consome não têm acesso ao Maven local de ninguém. -->
+    <!-- Publicado no GitHub Packages (Maven registry da org trilha-log) -->
     <distributionManagement>
         <repository>
             <id>github</id>
@@ -49,9 +51,8 @@
     </distributionManagement>
 
     <dependencies>
-        <!-- Core Spring Boot. Exclui spring-boot-starter-logging (Logback): esta lib traz o
-             motor de logging (Log4j2) e as duas bindings SLF4J juntas geram provider
-             ambiguo no classpath (ver spring-boot-starter-log4j2 mais abaixo). -->
+
+        <!-- Core Spring Boot. Exclui Logback porque esta biblioteca usa Log4j2. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
@@ -67,14 +68,15 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
-        <!-- AOP: @LogExecution. spring-boot-starter-aop foi renomeado para
+        <!-- AOP: @LogExecution.
+             spring-boot-starter-aop foi renomeado para
              spring-boot-starter-aspectj no Spring Boot 4.0. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
 
-        <!-- Web: RequestCorrelationFilter (sem puxar spring-boot-starter-web inteiro) -->
+        <!-- Web: RequestCorrelationFilter. Não puxa spring-boot-starter-web inteiro. -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
@@ -95,26 +97,34 @@
             <artifactId>log4j-layout-template-json</artifactId>
         </dependency>
 
-        <!-- JPA opcional: usado so para detectar @Entity via capability detection isolada -->
+        <!-- JPA opcional: usado somente para detectar @Entity via capability detection. -->
         <dependency>
             <groupId>jakarta.persistence</groupId>
             <artifactId>jakarta.persistence-api</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Micrometer Tracing opcional: correlacao de spans (traceId/spanId) com OpenTelemetry ou Brave -->
+        <!-- Micrometer Tracing opcional: correlacao de spans (traceId/spanId) com OpenTelemetry ou Brave. -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing</artifactId>
             <optional>true</optional>
         </dependency>
 
+        <!-- Jackson: usado pelo mascaramento de corpo HTTP JSON. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
+        <!-- Configuration Processor -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
