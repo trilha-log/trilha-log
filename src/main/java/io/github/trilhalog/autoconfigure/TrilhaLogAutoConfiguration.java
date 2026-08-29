@@ -40,8 +40,8 @@ public class TrilhaLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "trilha-log.aspect", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public LogExecutionAspect logExecutionAspect() {
-        return new LogExecutionAspect();
+    public LogExecutionAspect logExecutionAspect(TrilhaLogProperties properties) {
+        return new LogExecutionAspect(properties.getAspect().getMaxCallChainFrames());
     }
 
     // Fallback: sem Micrometer Tracing ou quando o inner class nao foi processado
@@ -51,7 +51,7 @@ public class TrilhaLogAutoConfiguration {
     @ConditionalOnProperty(prefix = "trilha-log.correlation", name = "enabled", havingValue = "true", matchIfMissing = true)
     public RequestCorrelationFilter requestCorrelationFilter(TrilhaLogProperties properties) {
         TrilhaLogProperties.Correlation c = properties.getCorrelation();
-        return new RequestCorrelationFilter(c.isLogIp(), c.getIncomingTraceHeaders(), null);
+        return new RequestCorrelationFilter(c.isLogIp(), c.getIncomingTraceHeaders(), c.getTraceIdLength(), null);
     }
 
     /**
@@ -72,7 +72,7 @@ public class TrilhaLogAutoConfiguration {
                 ObjectProvider<io.micrometer.tracing.Tracer> tracerProvider) {
             TrilhaLogProperties.Correlation c = properties.getCorrelation();
             return new RequestCorrelationFilter(
-                    c.isLogIp(), c.getIncomingTraceHeaders(), tracerProvider.getIfAvailable());
+                    c.isLogIp(), c.getIncomingTraceHeaders(), c.getTraceIdLength(), tracerProvider.getIfAvailable());
         }
     }
 }

@@ -42,12 +42,14 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
 
     private final boolean logIp;
     private final List<String> incomingTraceHeaders;
+    private final int traceIdLength;
     @Nullable
     private final Object tracer;
 
-    public RequestCorrelationFilter(boolean logIp, List<String> incomingTraceHeaders, @Nullable Object tracer) {
+    public RequestCorrelationFilter(boolean logIp, List<String> incomingTraceHeaders, int traceIdLength, @Nullable Object tracer) {
         this.logIp = logIp;
         this.incomingTraceHeaders = incomingTraceHeaders;
+        this.traceIdLength = traceIdLength;
         this.tracer = tracer;
     }
 
@@ -98,7 +100,12 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
                 return extrairTraceId(valor);
             }
         }
-        return UUID.randomUUID().toString().substring(0, 8);
+        return gerarTraceId();
+    }
+
+    private String gerarTraceId() {
+        String uuid = UUID.randomUUID().toString().replace("-", "");
+        return traceIdLength > 0 ? uuid.substring(0, Math.min(traceIdLength, uuid.length())) : uuid;
     }
 
     // Extrai o traceId de 32 chars do formato W3C traceparent
