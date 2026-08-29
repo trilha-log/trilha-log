@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
 
 /**
  * Intercepta metodos anotados com {@link LogExecution} (na classe ou no proprio metodo)
@@ -28,6 +29,16 @@ public class LogExecutionAspect {
 
     private static final String CALL_CHAIN_MDC_KEY = "callChain";
 
+    private final int maxCallChainFrames;
+
+    public LogExecutionAspect() {
+        this(0);
+    }
+
+    public LogExecutionAspect(int maxCallChainFrames) {
+        this.maxCallChainFrames = maxCallChainFrames;
+    }
+
     @Around("@within(io.github.trilhalog.aspect.LogExecution) || @annotation(io.github.trilhalog.aspect.LogExecution)")
     public Object logExecution(ProceedingJoinPoint joinPoint) throws Throwable {
         Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
@@ -38,7 +49,7 @@ public class LogExecutionAspect {
         String frame = targetClass.getSimpleName() + "." + method.getName();
 
         String previousChain = MDC.get(CALL_CHAIN_MDC_KEY);
-        MDC.put(CALL_CHAIN_MDC_KEY, previousChain == null ? frame : previousChain + " > " + frame);
+        MDC.put(CALL_CHAIN_MDC_KEY, novaChain(previousChain, frame));
 
         try {
             logEntry(logger, config, frame, method, joinPoint.getArgs());
@@ -75,6 +86,17 @@ public class LogExecutionAspect {
         } else {
             logger.atLevel(config.level()).log("<- {}", frame);
         }
+    }
+
+    private String novaChain(String anterior, String frame) {
+        String candidata = anterior == null ? frame : anterior + " > " + frame;
+        if (maxCallChainFrames <= 0) return candidata;
+
+        String[] frames = candidata.split(" > ");
+        if (frames.length <= maxCallChainFrames) return candidata;
+
+        String[] recentes = Arrays.copyOfRange(frames, frames.length - maxCallChainFrames, frames.length);
+        return "... > " + String.join(" > ", recentes);
     }
 
     private LogExecution resolveConfig(Method method, Class<?> targetClass) {

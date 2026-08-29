@@ -27,8 +27,12 @@ class LogExecutionAspectTest {
     }
 
     private <T> T proxy(T target) {
+        return proxy(target, new LogExecutionAspect());
+    }
+
+    private <T> T proxy(T target, LogExecutionAspect aspecto) {
         AspectJProxyFactory factory = new AspectJProxyFactory(target);
-        factory.addAspect(new LogExecutionAspect());
+        factory.addAspect(aspecto);
         return factory.getProxy();
     }
 
@@ -60,6 +64,19 @@ class LogExecutionAspectTest {
     static class ServicoSensivel {
         String autenticar(String usuario, String senha) {
             return "ok";
+        }
+    }
+
+    @LogExecution
+    static class ServicoC {
+        private final ServicoA servicoA;
+
+        ServicoC(ServicoA servicoA) {
+            this.servicoA = servicoA;
+        }
+
+        String iniciar(String nome) {
+            return servicoA.executar(nome);
         }
     }
 
@@ -137,6 +154,42 @@ class LogExecutionAspectTest {
 
         assertThat(appender.getEventos())
                 .noneMatch(e -> e.getMessage().getFormattedMessage().contains("supersecreta"));
+    }
+
+    @Test
+    void truncaCallChainQuandoLimiteAtingido() {
+        LogExecutionAspect aspecto = new LogExecutionAspect(2);
+        ServicoB servicoB = proxy(new ServicoB(), aspecto);
+        ServicoA servicoA = proxy(new ServicoA(servicoB), aspecto);
+        ServicoC servicoC = proxy(new ServicoC(servicoA), aspecto);
+
+        servicoC.iniciar("Kevin");
+
+        LogEvent entradaServicoB = appender.getEventos().stream()
+                .filter(e -> e.getMessage().getFormattedMessage().startsWith("-> ServicoB.processar"))
+                .findFirst()
+                .orElseThrow();
+
+        String callChain = entradaServicoB.getContextData().getValue("callChain");
+        assertThat(callChain).isEqualTo("... > ServicoA.executar > ServicoB.processar");
+    }
+
+    @Test
+    void restauraCallChainCorretamenteAposLimiteTingido() {
+        LogExecutionAspect aspecto = new LogExecutionAspect(2);
+        ServicoB servicoB = proxy(new ServicoB(), aspecto);
+        ServicoA servicoA = proxy(new ServicoA(servicoB), aspecto);
+        ServicoC servicoC = proxy(new ServicoC(servicoA), aspecto);
+
+        servicoC.iniciar("Kevin");
+
+        LogEvent saidaServicoC = appender.getEventos().stream()
+                .filter(e -> e.getMessage().getFormattedMessage().startsWith("<- ServicoC.iniciar"))
+                .findFirst()
+                .orElseThrow();
+
+        String callChain = saidaServicoC.getContextData().getValue("callChain");
+        assertThat(callChain).isEqualTo("ServicoC.iniciar");
     }
 
     @Test

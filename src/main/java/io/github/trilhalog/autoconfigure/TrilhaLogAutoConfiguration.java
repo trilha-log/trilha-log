@@ -34,8 +34,8 @@ public class TrilhaLogAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "trilha-log.aspect", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public LogExecutionAspect logExecutionAspect() {
-        return new LogExecutionAspect();
+    public LogExecutionAspect logExecutionAspect(TrilhaLogProperties properties) {
+        return new LogExecutionAspect(properties.getAspect().getMaxCallChainFrames());
     }
 
     @Bean
@@ -44,6 +44,9 @@ public class TrilhaLogAutoConfiguration {
     @ConditionalOnProperty(prefix = "trilha-log.correlation", name = "enabled", havingValue = "true", matchIfMissing = true)
     public RequestCorrelationFilter requestCorrelationFilter(TrilhaLogProperties properties) {
         TrilhaLogProperties.Correlation correlation = properties.getCorrelation();
-        return new RequestCorrelationFilter(correlation.isLogIp(), correlation.getIncomingTraceHeaders());
+        return new RequestCorrelationFilter(
+                correlation.isLogIp(),
+                correlation.getIncomingTraceHeaders(),
+                correlation.getTraceIdLength());
     }
 }
