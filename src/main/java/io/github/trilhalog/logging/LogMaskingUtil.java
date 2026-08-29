@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -74,6 +75,10 @@ public final class LogMaskingUtil {
     }
 
     public static Object mascarar(String nome, Object valor) {
+        return mascarar(nome, valor, Collections.newSetFromMap(new IdentityHashMap<>()));
+    }
+
+    private static Object mascarar(String nome, Object valor, Set<Object> visitados) {
         if (valor == null) {
             return null;
         }
@@ -90,7 +95,7 @@ public final class LogMaskingUtil {
         if (valor instanceof Collection || valor instanceof Map || tipo.isArray()) {
             return tipo.getSimpleName();
         }
-        return mascararCampos(valor);
+        return mascararCampos(valor, visitados);
     }
 
     private static boolean isNomeSensivel(String nome) {
@@ -124,7 +129,10 @@ public final class LogMaskingUtil {
         return campos;
     }
 
-    private static String mascararCampos(Object valor) {
+    private static String mascararCampos(Object valor, Set<Object> visitados) {
+        if (!visitados.add(valor)) {
+            return valor.getClass().getSimpleName() + "(circular)";
+        }
         Class<?> tipo = valor.getClass();
         StringJoiner joiner = new StringJoiner(", ", tipo.getSimpleName() + "{", "}");
         for (Field field : todosCampos(tipo)) {
@@ -140,7 +148,7 @@ public final class LogMaskingUtil {
             }
             Object valorMascarado = field.isAnnotationPresent(Sensitive.class)
                     ? "***"
-                    : mascarar(field.getName(), valorCampo);
+                    : mascarar(field.getName(), valorCampo, visitados);
             joiner.add(field.getName() + "=" + valorMascarado);
         }
         return joiner.toString();
