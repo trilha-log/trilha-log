@@ -29,6 +29,16 @@ public class TrilhaLogProperties {
         private boolean enabled = true;
         /** Inclui o IP do cliente no log de cada requisicao. Desabilitar em ambientes com requisitos LGPD/GDPR. */
         private boolean logIp = true;
+        /**
+         * Cabecalhos HTTP inspecionados em ordem para reutilizar um traceId externo.
+         * O primeiro cabecalho presente e nao vazio e usado; caso nenhum exista, um
+         * novo UUID e gerado. Suporta formato W3C traceparent (extrai o traceId de 32
+         * chars), X-Request-ID, X-Correlation-ID e X-B3-TraceId.
+         * Lista vazia desativa a propagacao e sempre gera novo traceId.
+         */
+        private List<String> incomingTraceHeaders = List.of(
+                "traceparent", "X-Request-ID", "X-Correlation-ID", "X-B3-TraceId"
+        );
 
         public boolean isEnabled() {
             return enabled;
@@ -44,6 +54,14 @@ public class TrilhaLogProperties {
 
         public void setLogIp(boolean logIp) {
             this.logIp = logIp;
+        }
+
+        public List<String> getIncomingTraceHeaders() {
+            return incomingTraceHeaders;
+        }
+
+        public void setIncomingTraceHeaders(List<String> incomingTraceHeaders) {
+            this.incomingTraceHeaders = incomingTraceHeaders;
         }
     }
 
