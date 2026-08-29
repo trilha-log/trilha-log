@@ -29,9 +29,23 @@ import java.util.UUID;
  */
 public final class LogMaskingUtil {
 
-    private static final Set<String> DEFAULT_KEYWORDS = Set.of(
-            "senha", "password", "token", "secret", "apikey", "api-key", "authorization", "chave"
-    );
+    private static final Set<String> DEFAULT_KEYWORDS = defaultKeywords();
+
+    private static Set<String> defaultKeywords() {
+        Set<String> kw = new HashSet<>();
+        // autenticação
+        Collections.addAll(kw, "senha", "password", "token", "secret", "apikey", "api-key",
+                "authorization", "chave", "pin", "otp", "cvv", "passphrase");
+        // documentos pessoais (LGPD)
+        Collections.addAll(kw, "cpf", "ssn", "rg", "nif", "passaporte", "passport");
+        // contato / identificação (LGPD)
+        Collections.addAll(kw, "email", "telefone", "phone", "celular", "mobile");
+        // financeiro
+        Collections.addAll(kw, "creditcard", "cartao", "accountnumber");
+        // criptografia
+        Collections.addAll(kw, "privatekey", "signingkey", "encryptionkey");
+        return Set.copyOf(kw);
+    }
 
     private static final boolean JPA_PRESENT = ClassUtils.isPresent(
             "jakarta.persistence.Entity", LogMaskingUtil.class.getClassLoader());
