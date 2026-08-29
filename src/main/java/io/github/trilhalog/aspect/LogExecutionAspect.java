@@ -1,6 +1,7 @@
 package io.github.trilhalog.aspect;
 
 import io.github.trilhalog.logging.LogMaskingUtil;
+import io.github.trilhalog.logging.Sensitive;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -91,8 +92,15 @@ public class LogExecutionAspect {
             if (i > 0) {
                 sb.append(", ");
             }
-            String paramName = i < parameters.length ? parameters[i].getName() : "arg" + i;
-            sb.append(LogMaskingUtil.mascarar(paramName, args[i]));
+            if (i < parameters.length) {
+                Parameter param = parameters[i];
+                Object mascarado = param.isAnnotationPresent(Sensitive.class)
+                        ? "***"
+                        : LogMaskingUtil.mascarar(param.getName(), args[i]);
+                sb.append(param.getName()).append("=").append(mascarado);
+            } else {
+                sb.append(LogMaskingUtil.mascarar("arg" + i, args[i]));
+            }
         }
         return sb.append("]").toString();
     }

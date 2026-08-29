@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * Marca um campo como sensivel: {@link LogMaskingUtil} sempre mascara o valor,
  * independente do nome do campo bater alguma palavra-chave conhecida.
  */
-@Target(ElementType.FIELD)
+@Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Sensitive {
 }
