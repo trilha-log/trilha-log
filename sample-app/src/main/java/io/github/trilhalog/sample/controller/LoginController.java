@@ -1,6 +1,7 @@
 package io.github.trilhalog.sample.controller;
 
 import io.github.trilhalog.sample.dto.LoginRequest;
+import io.github.trilhalog.sample.security.SanitizeHtml;
 import io.github.trilhalog.sample.service.LoginService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +23,7 @@ public class LoginController {
         return loginService.login(request);
     }
 
+    @SanitizeHtml
     @GetMapping("/saudacao/{nome}")
     public String saudacao(@PathVariable String nome) {
         return "ola, " + nome;
