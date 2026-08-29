@@ -50,6 +50,9 @@ public final class LogMaskingUtil {
     private static final boolean JPA_PRESENT = ClassUtils.isPresent(
             "jakarta.persistence.Entity", LogMaskingUtil.class.getClassLoader());
 
+    private static final boolean JACKSON_PRESENT = ClassUtils.isPresent(
+            "com.fasterxml.jackson.databind.ObjectMapper", LogMaskingUtil.class.getClassLoader());
+
     private static volatile Set<String> keywords = DEFAULT_KEYWORDS;
 
     private LogMaskingUtil() {
@@ -72,6 +75,23 @@ public final class LogMaskingUtil {
             }
         }
         keywords = Set.copyOf(combinadas);
+    }
+
+    /**
+     * Parseia um body JSON como {@code Map<String, Object>} e aplica
+     * {@link #mascarar} a cada campo de nivel raiz. Requer Jackson no classpath.
+     * Retorna o json original sem modificacao se Jackson nao estiver disponivel,
+     * ou {@code "<body-ilegivel>"} se o parsing falhar.
+     */
+    public static String mascararJson(String json) {
+        if (!JACKSON_PRESENT) {
+            return json;
+        }
+        try {
+            return JsonBodyMasker.mascarar(json);
+        } catch (Exception e) {
+            return "<body-ilegivel>";
+        }
     }
 
     public static Object mascarar(String nome, Object valor) {
