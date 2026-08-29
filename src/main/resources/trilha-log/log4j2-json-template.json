@@ -14,6 +14,10 @@
     "$resolver": "mdc",
     "key": "traceId"
   },
+  "spanId": {
+    "$resolver": "mdc",
+    "key": "spanId"
+  },
   "callChain": {
     "$resolver": "mdc",
     "key": "callChain"
