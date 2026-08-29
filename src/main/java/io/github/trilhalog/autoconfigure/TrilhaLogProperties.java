@@ -39,6 +39,12 @@ public class TrilhaLogProperties {
         private List<String> incomingTraceHeaders = List.of(
                 "traceparent", "X-Request-ID", "X-Correlation-ID", "X-B3-TraceId"
         );
+        /**
+         * Comprimento do traceId gerado. 0 usa o UUID completo (32 chars hex, sem hifens).
+         * Valores positivos truncam para os primeiros N chars. Nao afeta traceIds propagados
+         * de cabecalhos de entrada.
+         */
+        private int traceIdLength = 0;
 
         public boolean isEnabled() {
             return enabled;
@@ -62,6 +68,14 @@ public class TrilhaLogProperties {
 
         public void setIncomingTraceHeaders(List<String> incomingTraceHeaders) {
             this.incomingTraceHeaders = incomingTraceHeaders;
+        }
+
+        public int getTraceIdLength() {
+            return traceIdLength;
+        }
+
+        public void setTraceIdLength(int traceIdLength) {
+            this.traceIdLength = traceIdLength;
         }
     }
 
