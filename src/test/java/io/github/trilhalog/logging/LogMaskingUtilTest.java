@@ -131,6 +131,41 @@ class LogMaskingUtilTest {
                 .doesNotContain("hash123");
     }
 
+    static class No {
+        String valor;
+        No proximo;
+
+        No(String valor) {
+            this.valor = valor;
+        }
+    }
+
+    @Test
+    void referenciaCircularDiretaNaoCausaStackOverflow() {
+        No a = new No("a");
+        a.proximo = a;
+
+        Object resultado = LogMaskingUtil.mascarar("no", a);
+
+        assertThat(resultado.toString())
+                .contains("No{")
+                .contains("(circular)");
+    }
+
+    @Test
+    void referenciaCircularIndiretaNaoCausaStackOverflow() {
+        No a = new No("a");
+        No b = new No("b");
+        a.proximo = b;
+        b.proximo = a;
+
+        Object resultado = LogMaskingUtil.mascarar("no", a);
+
+        assertThat(resultado.toString())
+                .contains("No{")
+                .contains("(circular)");
+    }
+
     // Subclasse anônima de Field não é viável sem módulo selado real; verificamos
     // que o fluxo completo de mascararCampos() termina sem exceção propagada mesmo
     // quando um campo não pode ser acessado — o valor vira "<inacessivel>".
