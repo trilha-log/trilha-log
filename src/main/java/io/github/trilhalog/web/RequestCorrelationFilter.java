@@ -28,6 +28,12 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
 
     public static final String TRACE_ID_MDC_KEY = "traceId";
 
+    private final boolean logIp;
+
+    public RequestCorrelationFilter(boolean logIp) {
+        this.logIp = logIp;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -38,13 +44,20 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             long duracaoMs = System.currentTimeMillis() - inicio;
-            log.info("{} {} status={} duracaoMs={} ip={}",
-                    request.getMethod(),
-                    request.getRequestURI(),
-                    response.getStatus(),
-                    duracaoMs,
-                    request.getRemoteAddr());
+            logar(request, response, duracaoMs);
             MDC.remove(TRACE_ID_MDC_KEY);
+        }
+    }
+
+    private void logar(HttpServletRequest request, HttpServletResponse response, long duracaoMs) {
+        if (logIp) {
+            log.info("{} {} status={} duracaoMs={} ip={}",
+                    request.getMethod(), request.getRequestURI(),
+                    response.getStatus(), duracaoMs, request.getRemoteAddr());
+        } else {
+            log.info("{} {} status={} duracaoMs={}",
+                    request.getMethod(), request.getRequestURI(),
+                    response.getStatus(), duracaoMs);
         }
     }
 }
