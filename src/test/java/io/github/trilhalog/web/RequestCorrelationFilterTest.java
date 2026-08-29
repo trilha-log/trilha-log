@@ -18,7 +18,7 @@ class RequestCorrelationFilterTest {
 
     private static final String IP_TESTE = "192.168.1.100";
 
-    private final RequestCorrelationFilter filter = new RequestCorrelationFilter(true, List.of());
+    private final RequestCorrelationFilter filter = new RequestCorrelationFilter(true, List.of(), 0);
     private final CapturaLogAppender appender = new CapturaLogAppender();
 
     @BeforeEach
@@ -42,7 +42,7 @@ class RequestCorrelationFilterTest {
 
         filter.doFilter(request, response, chain);
 
-        assertThat(traceIdDuranteChain.toString()).hasSize(8);
+        assertThat(traceIdDuranteChain.toString()).hasSize(32);
         assertThat(MDC.get(RequestCorrelationFilter.TRACE_ID_MDC_KEY)).isNull();
     }
 
@@ -76,7 +76,7 @@ class RequestCorrelationFilterTest {
 
     @Test
     void naoLogaIpQuandoLogIpDesativado() throws Exception {
-        RequestCorrelationFilter filterSemIp = new RequestCorrelationFilter(false, List.of());
+        RequestCorrelationFilter filterSemIp = new RequestCorrelationFilter(false, List.of(), 0);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ping");
         request.setRemoteAddr(IP_TESTE);
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -90,7 +90,7 @@ class RequestCorrelationFilterTest {
 
     @Test
     void usaXRequestIdComoTraceIdQuandoPresente() throws Exception {
-        RequestCorrelationFilter filterComCabecalho = new RequestCorrelationFilter(true, List.of("X-Request-ID"));
+        RequestCorrelationFilter filterComCabecalho = new RequestCorrelationFilter(true, List.of("X-Request-ID"), 0);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ping");
         request.addHeader("X-Request-ID", "meu-trace-externo");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -104,7 +104,7 @@ class RequestCorrelationFilterTest {
 
     @Test
     void extraiTraceIdDoFormatoW3cTraceparent() throws Exception {
-        RequestCorrelationFilter filterComCabecalho = new RequestCorrelationFilter(true, List.of("traceparent"));
+        RequestCorrelationFilter filterComCabecalho = new RequestCorrelationFilter(true, List.of("traceparent"), 0);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ping");
         request.addHeader("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -118,7 +118,7 @@ class RequestCorrelationFilterTest {
 
     @Test
     void geraNovoTraceIdQuandoNenhumCabecalhoEstaPresente() throws Exception {
-        RequestCorrelationFilter filterComCabecalho = new RequestCorrelationFilter(true, List.of("X-Request-ID"));
+        RequestCorrelationFilter filterComCabecalho = new RequestCorrelationFilter(true, List.of("X-Request-ID"), 0);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ping");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -128,6 +128,21 @@ class RequestCorrelationFilterTest {
 
         assertThat(traceIdCapturado.toString())
                 .isNotBlank()
-                .hasSize(8);
+                .hasSize(32);
+    }
+
+    @Test
+    void respeitaComprimentoConfiguradoAoGerarTraceId() throws Exception {
+        RequestCorrelationFilter filterComTamanho = new RequestCorrelationFilter(true, List.of(), 8);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/ping");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        response.setStatus(200);
+
+        StringBuilder traceIdDuranteChain = new StringBuilder();
+        FilterChain chain = (req, res) -> traceIdDuranteChain.append(MDC.get(RequestCorrelationFilter.TRACE_ID_MDC_KEY));
+
+        filterComTamanho.doFilter(request, response, chain);
+
+        assertThat(traceIdDuranteChain.toString()).hasSize(8);
     }
 }
