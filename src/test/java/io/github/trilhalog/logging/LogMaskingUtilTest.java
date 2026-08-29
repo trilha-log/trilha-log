@@ -147,13 +147,32 @@ class LogMaskingUtilTest {
     }
 
     @Test
-    void aplicaPalavrasChaveExtrasConfiguradas() {
-        LogMaskingUtil.configurarPalavrasChave(List.of("cpf"));
-
+    void mascaraKeywordsPiiPorPadrao() {
+        // autenticação
+        assertThat(LogMaskingUtil.mascarar("pin", "1234")).isEqualTo("***");
+        assertThat(LogMaskingUtil.mascarar("otp", "987654")).isEqualTo("***");
+        assertThat(LogMaskingUtil.mascarar("cvv", "321")).isEqualTo("***");
+        // documentos pessoais
         assertThat(LogMaskingUtil.mascarar("cpf", "12345678900")).isEqualTo("***");
+        assertThat(LogMaskingUtil.mascarar("ssn", "000-00-0000")).isEqualTo("***");
+        // contato
+        assertThat(LogMaskingUtil.mascarar("email", "user@example.com")).isEqualTo("***");
+        assertThat(LogMaskingUtil.mascarar("telefone", "11999999999")).isEqualTo("***");
+        // financeiro
+        assertThat(LogMaskingUtil.mascarar("cartaoCredito", "4111111111111111")).isEqualTo("***");
+        assertThat(LogMaskingUtil.mascarar("creditCardNumber", "4111111111111111")).isEqualTo("***");
+        // criptografia
+        assertThat(LogMaskingUtil.mascarar("privateKey", "-----BEGIN RSA")).isEqualTo("***");
+    }
+
+    @Test
+    void aplicaPalavrasChaveExtrasConfiguradas() {
+        LogMaskingUtil.configurarPalavrasChave(List.of("numeroproposta"));
+
+        assertThat(LogMaskingUtil.mascarar("numeroproposta", "XYZ-001")).isEqualTo("***");
 
         LogMaskingUtil.configurarPalavrasChave(null);
 
-        assertThat(LogMaskingUtil.mascarar("cpf", "12345678900")).isEqualTo("12345678900");
+        assertThat(LogMaskingUtil.mascarar("numeroproposta", "XYZ-001")).isEqualTo("XYZ-001");
     }
 }
