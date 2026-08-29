@@ -1,5 +1,6 @@
 package io.github.trilhalog.web;
 
+import io.github.trilhalog.tracing.MicrometerTracingBridge;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.lang.Nullable;
+import org.springframework.util.ClassUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -20,6 +23,10 @@ import java.util.UUID;
  * aplicacao consumidora logarem. {@code @Order(HIGHEST_PRECEDENCE)} garante
  * que roda antes de qualquer filtro de seguranca.
  * <p>
+ * Quando Micrometer Tracing esta no classpath e um {@code Tracer} e injetado,
+ * reutiliza o traceId/spanId do span ativo em vez de gerar um novo. Se nao
+ * houver span ativo, cai no fallback de cabecalhos HTTP ou UUID gerado.
+ * <p>
  * Nunca loga corpo ou parametros da requisicao, em nenhum profile — risco de
  * vazar dado sensivel sem mascaramento.
  */
@@ -28,13 +35,20 @@ import java.util.UUID;
 public class RequestCorrelationFilter extends OncePerRequestFilter {
 
     public static final String TRACE_ID_MDC_KEY = "traceId";
+    public static final String SPAN_ID_MDC_KEY = "spanId";
+
+    private static final boolean MICROMETER_TRACING_PRESENT = ClassUtils.isPresent(
+            "io.micrometer.tracing.Tracer", RequestCorrelationFilter.class.getClassLoader());
 
     private final boolean logIp;
     private final List<String> incomingTraceHeaders;
+    @Nullable
+    private final Object tracer;
 
-    public RequestCorrelationFilter(boolean logIp, List<String> incomingTraceHeaders) {
+    public RequestCorrelationFilter(boolean logIp, List<String> incomingTraceHeaders, @Nullable Object tracer) {
         this.logIp = logIp;
         this.incomingTraceHeaders = incomingTraceHeaders;
+        this.tracer = tracer;
     }
 
     @Override
@@ -42,6 +56,12 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String traceId = resolverTraceId(request);
         MDC.put(TRACE_ID_MDC_KEY, traceId);
+        if (MICROMETER_TRACING_PRESENT && tracer != null) {
+            String spanId = MicrometerTracingBridge.spanId(tracer);
+            if (spanId != null) {
+                MDC.put(SPAN_ID_MDC_KEY, spanId);
+            }
+        }
         long inicio = System.currentTimeMillis();
         try {
             filterChain.doFilter(request, response);
@@ -49,6 +69,7 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
             long duracaoMs = System.currentTimeMillis() - inicio;
             logar(request, response, duracaoMs);
             MDC.remove(TRACE_ID_MDC_KEY);
+            MDC.remove(SPAN_ID_MDC_KEY);
         }
     }
 
@@ -65,6 +86,12 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
     }
 
     private String resolverTraceId(HttpServletRequest request) {
+        if (MICROMETER_TRACING_PRESENT && tracer != null) {
+            String id = MicrometerTracingBridge.traceId(tracer);
+            if (id != null && !id.isBlank()) {
+                return id;
+            }
+        }
         for (String header : incomingTraceHeaders) {
             String valor = request.getHeader(header);
             if (valor != null && !valor.isBlank()) {
