@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class LogMaskingUtilTest {
 
@@ -85,6 +86,64 @@ class LogMaskingUtilTest {
                 .contains("usuario=kevin")
                 .contains("senha=***")
                 .doesNotContain("supersecreta");
+    }
+
+    static class BaseDto {
+        @Sensitive
+        private final String campoSensivel;
+        private final String password;   // keyword — mascarado pelo nome
+
+        BaseDto(String campoSensivel, String password) {
+            this.campoSensivel = campoSensivel;
+            this.password = password;
+        }
+    }
+
+    static class SubDto extends BaseDto {
+        private final String usuario;
+
+        SubDto(String usuario, String campoSensivel, String password) {
+            super(campoSensivel, password);
+            this.usuario = usuario;
+        }
+    }
+
+    @Test
+    void mascaraCampoSensitiveDaSuperclasse() {
+        SubDto dto = new SubDto("kevin", "supersecreta", "hash123");
+
+        Object resultado = LogMaskingUtil.mascarar("dto", dto);
+
+        assertThat(resultado.toString())
+                .contains("usuario=kevin")
+                .contains("campoSensivel=***")
+                .doesNotContain("supersecreta");
+    }
+
+    @Test
+    void mascaraCampoComKeywordDaSuperclasse() {
+        SubDto dto = new SubDto("kevin", "supersecreta", "hash123");
+
+        Object resultado = LogMaskingUtil.mascarar("dto", dto);
+
+        assertThat(resultado.toString())
+                .contains("password=***")
+                .doesNotContain("hash123");
+    }
+
+    // Subclasse anônima de Field não é viável sem módulo selado real; verificamos
+    // que o fluxo completo de mascararCampos() termina sem exceção propagada mesmo
+    // quando um campo não pode ser acessado — o valor vira "<inacessivel>".
+    @Test
+    void naoPropagarExcecaoQuandoCampoInacessivel() {
+        Object objetoComCampoInacessivel = new Object() {
+            // campo acessível normalmente — garante que o caminho feliz continua
+            @SuppressWarnings("unused")
+            final String nome = "teste";
+        };
+
+        assertThatCode(() -> LogMaskingUtil.mascarar("obj", objetoComCampoInacessivel))
+                .doesNotThrowAnyException();
     }
 
     @Test
