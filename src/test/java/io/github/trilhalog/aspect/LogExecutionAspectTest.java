@@ -9,6 +9,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,6 +56,7 @@ class LogExecutionAspectTest {
 
     @LogExecution
     static class ServicoB {
+
         String processar(String nome) {
             return "ola " + nome;
         }
@@ -62,6 +68,7 @@ class LogExecutionAspectTest {
 
     @LogExecution
     static class ServicoSensivel {
+
         String autenticar(String usuario, String senha) {
             return "ok";
         }
@@ -82,8 +89,98 @@ class LogExecutionAspectTest {
 
     @LogExecution
     static class ServicoComParametroSensivel {
+
         String mudarSenha(String login, @Sensitive String novoValor) {
             return "ok";
+        }
+    }
+
+    /**
+     * Retorno concreto usado para validar que tipos nao excluidos
+     * continuam sendo logados normalmente.
+     */
+    @LogExecution(excludeReturnTypes = {byte[].class})
+    static class ServicoComRetornoNormal {
+
+        String retornarTexto() {
+            return "texto-normal";
+        }
+    }
+
+    /**
+     * Retorno byte[] usado para validar exclusao de arrays de tipos primitivos.
+     */
+    @LogExecution(excludeReturnTypes = {byte[].class})
+    static class ServicoComRetornoByteArray {
+
+        byte[] retornarBytes() {
+            return new byte[]{1, 2, 3, 4};
+        }
+    }
+
+    /**
+     * Classe abstrata usada para validar isAssignableFrom.
+     */
+    abstract static class RetornoAbstrato {
+    }
+
+    static class RetornoConcreto extends RetornoAbstrato {
+    }
+
+    @LogExecution(excludeReturnTypes = {RetornoAbstrato.class})
+    static class ServicoComRetornoAbstrato {
+
+        RetornoAbstrato retornarAbstrato() {
+            return new RetornoConcreto();
+        }
+    }
+
+    /**
+     * Interface usada para validar isAssignableFrom contra implementacoes concretas.
+     */
+    interface RetornoInterface {
+    }
+
+    static class RetornoInterfaceImpl implements RetornoInterface {
+    }
+
+    @LogExecution(excludeReturnTypes = {RetornoInterface.class})
+    static class ServicoComRetornoInterface {
+
+        RetornoInterface retornarInterface() {
+            return new RetornoInterfaceImpl();
+        }
+    }
+
+    @LogExecution(excludeReturnTypes = {byte[].class, InputStream.class})
+    static class ServicoComMultiplosTiposExcluidos {
+
+        byte[] retornarBytes() {
+            return new byte[]{10, 20, 30};
+        }
+
+        InputStream retornarStream() {
+            return new ByteArrayInputStream(new byte[]{1, 2, 3});
+        }
+
+        String retornarTexto() {
+            return "texto";
+        }
+    }
+
+    @LogExecution(excludeReturnTypes = {String.class})
+    static class ServicoComRetornoNulo {
+
+        String retornarNulo() {
+            return null;
+        }
+    }
+
+    @LogExecution(logReturn = false)
+    static class ServicoSemLogDeRetorno {
+
+        String retornarTexto() {
+            return "nao-deve-aparecer";
         }
     }
 
@@ -106,12 +203,15 @@ class LogExecutionAspectTest {
         servicoAProxy.executar("Kevin");
 
         LogEvent entradaServicoB = appender.getEventos().stream()
-                .filter(e -> e.getMessage().getFormattedMessage().startsWith("-> ServicoB.processar"))
+                .filter(e -> e.getMessage().getFormattedMessage()
+                        .startsWith("-> ServicoB.processar"))
                 .findFirst()
                 .orElseThrow();
 
         String callChain = entradaServicoB.getContextData().getValue("callChain");
-        assertThat(callChain).isEqualTo("ServicoA.executar > ServicoB.processar");
+
+        assertThat(callChain)
+                .isEqualTo("ServicoA.executar > ServicoB.processar");
     }
 
     @Test
@@ -122,12 +222,15 @@ class LogExecutionAspectTest {
         servicoAProxy.executar("Kevin");
 
         LogEvent saidaServicoA = appender.getEventos().stream()
-                .filter(e -> e.getMessage().getFormattedMessage().startsWith("<- ServicoA.executar"))
+                .filter(e -> e.getMessage().getFormattedMessage()
+                        .startsWith("<- ServicoA.executar"))
                 .findFirst()
                 .orElseThrow();
 
         String callChain = saidaServicoA.getContextData().getValue("callChain");
-        assertThat(callChain).isEqualTo("ServicoA.executar");
+
+        assertThat(callChain)
+                .isEqualTo("ServicoA.executar");
     }
 
     @Test
@@ -143,7 +246,8 @@ class LogExecutionAspectTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertThat(erroEvent.getThrown()).isInstanceOf(IllegalStateException.class);
+        assertThat(erroEvent.getThrown())
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -153,12 +257,14 @@ class LogExecutionAspectTest {
         servico.autenticar("kevin", "supersecreta");
 
         assertThat(appender.getEventos())
-                .noneMatch(e -> e.getMessage().getFormattedMessage().contains("supersecreta"));
+                .noneMatch(e -> e.getMessage().getFormattedMessage()
+                        .contains("supersecreta"));
     }
 
     @Test
     void truncaCallChainQuandoLimiteAtingido() {
         LogExecutionAspect aspecto = new LogExecutionAspect(2);
+
         ServicoB servicoB = proxy(new ServicoB(), aspecto);
         ServicoA servicoA = proxy(new ServicoA(servicoB), aspecto);
         ServicoC servicoC = proxy(new ServicoC(servicoA), aspecto);
@@ -166,17 +272,21 @@ class LogExecutionAspectTest {
         servicoC.iniciar("Kevin");
 
         LogEvent entradaServicoB = appender.getEventos().stream()
-                .filter(e -> e.getMessage().getFormattedMessage().startsWith("-> ServicoB.processar"))
+                .filter(e -> e.getMessage().getFormattedMessage()
+                        .startsWith("-> ServicoB.processar"))
                 .findFirst()
                 .orElseThrow();
 
         String callChain = entradaServicoB.getContextData().getValue("callChain");
-        assertThat(callChain).isEqualTo("... > ServicoA.executar > ServicoB.processar");
+
+        assertThat(callChain)
+                .isEqualTo("... > ServicoA.executar > ServicoB.processar");
     }
 
     @Test
     void restauraCallChainCorretamenteAposLimiteTingido() {
         LogExecutionAspect aspecto = new LogExecutionAspect(2);
+
         ServicoB servicoB = proxy(new ServicoB(), aspecto);
         ServicoA servicoA = proxy(new ServicoA(servicoB), aspecto);
         ServicoC servicoC = proxy(new ServicoC(servicoA), aspecto);
@@ -184,12 +294,15 @@ class LogExecutionAspectTest {
         servicoC.iniciar("Kevin");
 
         LogEvent saidaServicoC = appender.getEventos().stream()
-                .filter(e -> e.getMessage().getFormattedMessage().startsWith("<- ServicoC.iniciar"))
+                .filter(e -> e.getMessage().getFormattedMessage()
+                        .startsWith("<- ServicoC.iniciar"))
                 .findFirst()
                 .orElseThrow();
 
         String callChain = saidaServicoC.getContextData().getValue("callChain");
-        assertThat(callChain).isEqualTo("ServicoC.iniciar");
+
+        assertThat(callChain)
+                .isEqualTo("ServicoC.iniciar");
     }
 
     @Test
@@ -199,6 +312,130 @@ class LogExecutionAspectTest {
         servico.mudarSenha("kevin", "supersecreta");
 
         assertThat(appender.getEventos())
-                .noneMatch(e -> e.getMessage().getFormattedMessage().contains("supersecreta"));
+                .noneMatch(e -> e.getMessage().getFormattedMessage()
+                        .contains("supersecreta"));
+    }
+
+    @Test
+    void logaRetornoNormalQuandoNenhumTipoEstaExcluido() {
+        ServicoComRetornoNormal servico = proxy(new ServicoComRetornoNormal());
+
+        String resultado = servico.retornarTexto();
+
+        assertThat(resultado).isEqualTo("texto-normal");
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> {
+                    String mensagem = e.getMessage().getFormattedMessage();
+                    return mensagem.contains("<- ServicoComRetornoNormal.retornarTexto")
+                            && mensagem.contains("return=texto-normal");
+                });
+    }
+
+    @Test
+    void naoLogaValorDoRetornoQuandoTipoPrimitivoArrayEstaExcluido() {
+        ServicoComRetornoByteArray servico = proxy(new ServicoComRetornoByteArray());
+
+        byte[] resultado = servico.retornarBytes();
+
+        assertThat(resultado).containsExactly(1, 2, 3, 4);
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> {
+                    String mensagem = e.getMessage().getFormattedMessage();
+
+                    return mensagem.equals("<- ServicoComRetornoByteArray.retornarBytes");
+                });
+    }
+
+    @Test
+    void naoLogaRetornoQuandoClasseAbstrataEstaExcluida() {
+        ServicoComRetornoAbstrato servico = proxy(new ServicoComRetornoAbstrato());
+
+        RetornoAbstrato resultado = servico.retornarAbstrato();
+
+        assertThat(resultado).isInstanceOf(RetornoConcreto.class);
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> {
+                    String mensagem = e.getMessage().getFormattedMessage();
+
+                    return mensagem.equals("<- ServicoComRetornoAbstrato.retornarAbstrato");
+                });
+    }
+
+    @Test
+    void naoLogaRetornoQuandoInterfaceEstaExcluida() {
+        ServicoComRetornoInterface servico = proxy(new ServicoComRetornoInterface());
+
+        RetornoInterface resultado = servico.retornarInterface();
+
+        assertThat(resultado).isInstanceOf(RetornoInterfaceImpl.class);
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> {
+                    String mensagem = e.getMessage().getFormattedMessage();
+
+                    return mensagem.equals("<- ServicoComRetornoInterface.retornarInterface");
+                });
+    }
+
+    @Test
+    void excluiMultiplosTiposDeRetorno() {
+        ServicoComMultiplosTiposExcluidos servico =
+                proxy(new ServicoComMultiplosTiposExcluidos());
+
+        servico.retornarBytes();
+        servico.retornarStream();
+        servico.retornarTexto();
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> e.getMessage().getFormattedMessage()
+                        .equals("<- ServicoComMultiplosTiposExcluidos.retornarBytes"));
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> e.getMessage().getFormattedMessage()
+                        .equals("<- ServicoComMultiplosTiposExcluidos.retornarStream"));
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> {
+                    String mensagem = e.getMessage().getFormattedMessage();
+
+                    return mensagem.contains("<- ServicoComMultiplosTiposExcluidos.retornarTexto")
+                            && mensagem.contains("return=texto");
+                });
+    }
+
+    @Test
+    void naoExcluiRetornoNuloMesmoQuandoStringEstaExcluida() {
+        ServicoComRetornoNulo servico = proxy(new ServicoComRetornoNulo());
+
+        String resultado = servico.retornarNulo();
+
+        assertThat(resultado).isNull();
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> {
+                    String mensagem = e.getMessage().getFormattedMessage();
+
+                    return mensagem.contains("<- ServicoComRetornoNulo.retornarNulo")
+                            && mensagem.contains("return=null");
+                });
+    }
+
+    @Test
+    void logReturnFalseContinuaSemLogarValorDoRetorno() {
+        ServicoSemLogDeRetorno servico = proxy(new ServicoSemLogDeRetorno());
+
+        String resultado = servico.retornarTexto();
+
+        assertThat(resultado).isEqualTo("nao-deve-aparecer");
+
+        assertThat(appender.getEventos())
+                .anyMatch(e -> {
+                    String mensagem = e.getMessage().getFormattedMessage();
+
+                    return mensagem.equals("<- ServicoSemLogDeRetorno.retornarTexto");
+                });
     }
 }
