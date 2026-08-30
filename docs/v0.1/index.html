@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>trilha-log — Documentação</title>
 <meta name="description" content="Documentação do trilha-log: logging estruturado para Spring Boot — correlação de requisição, execução via AOP e mascaramento de dados sensíveis.">
-<link rel="icon" href="assets/favicon.ico">
+<link rel="icon" href="../assets/favicon.ico">
 </head>
 <body>
 <!-- VERSION-SWITCHER:START -->
@@ -48,12 +48,12 @@
   <div class="version-bar-inner">
     <label for="versionSelect">Versão da documentação</label>
     <select id="versionSelect" onchange="window.location.href=this.value">
-      <option value="/trilha-log/" selected>v0.2 (mais recente)</option>
-      <option value="/trilha-log/v0.1/">v0.1</option>
+      <option value="/trilha-log/">v0.2 (mais recente)</option>
+      <option value="/trilha-log/v0.1/" selected>v0.1</option>
     </select>
   </div>
 </div>
-
+<div class="version-old-banner">Você está vendo a documentação da <strong>v0.1</strong> — a versão mais recente é a <strong>v0.2</strong>.<a href="/trilha-log/">Ver docs da v0.2 →</a></div>
 <!-- VERSION-SWITCHER:END -->
 <style>
   :root {
@@ -495,7 +495,7 @@
   <div class="masthead-inner">
     <span class="eyebrow">Spring Boot · Logging estruturado</span>
     <div class="wordmark">
-      <img class="logo-icon" src="assets/logo-icon.png" width="56" height="49" alt="" />
+      <img class="logo-icon" src="../assets/logo-icon.png" width="56" height="49" alt="" />
       <h1><span class="brand-word-navy">trilha</span><span class="brand-word-orange">log</span></h1>
     </div>
     <p class="tagline">Correlação de requisição, execução de método via AOP com breadcrumb de call chain, e mascaramento de dados sensíveis — como starter Spring Boot. Adiciona a dependência, ganha a base pronta.</p>
@@ -511,7 +511,7 @@
         <pre><code>&lt;dependency&gt;
     &lt;groupId&gt;io.github.trilhalog&lt;/groupId&gt;
     &lt;artifactId&gt;trilha-log&lt;/artifactId&gt;
-    &lt;version&gt;0.2.0&lt;/version&gt;
+    &lt;version&gt;0.1.0&lt;/version&gt;
 &lt;/dependency&gt;</code></pre>
       </div>
     </div>
@@ -536,9 +536,6 @@
       <h4>Conceitos</h4>
       <ul>
         <li><a href="#trace-id">Correlação de requisição</a></li>
-        <li><a href="#trace-propagacao">Propagação de traceId</a></li>
-        <li><a href="#http-body">Logging de corpo HTTP</a></li>
-        <li><a href="#micrometer">Micrometer Tracing</a></li>
         <li><a href="#log-execution">Execução via AOP</a></li>
         <li><a href="#mascaramento">Mascaramento</a></li>
         <li><a href="#app-log">Eventos de negócio</a></li>
@@ -572,10 +569,10 @@
         <table>
           <thead><tr><th>Peça</th><th>O que resolve</th></tr></thead>
           <tbody>
-            <tr><td><code>RequestCorrelationFilter</code></td><td>Um <span class="pill trace">traceId</span> por requisição, presente em todo log emitido enquanto ela é processada — inclusive de bibliotecas de terceiros. Propaga traceId de cabeçalhos externos (W3C, B3, X-Request-ID). Integra com Micrometer Tracing quando disponível.</td></tr>
-            <tr><td><code>@LogExecution</code></td><td>Log de entrada, saída e exceção de método via AOP, com um breadcrumb de <span class="pill chain">callChain</span> acumulando em chamadas aninhadas. Suporta <code>excludeReturnTypes</code> e limite de frames no callChain.</td></tr>
-            <tr><td><code>@Sensitive</code> / <code>LogMaskingUtil</code></td><td>Mascaramento central: nunca reflete entidade JPA nem coleção/mapa; nunca deixa senha, token etc. em claro. <code>@Sensitive</code> pode ser usada em campos <em>e</em> em parâmetros de método.</td></tr>
-            <tr><td><code>AppLog</code></td><td>Log de evento de negócio no meio de um método, onde o AOP não alcança. Sobrecargas com <code>Map&lt;String, ?&gt;</code> adicionam campos ao MDC temporariamente — aparecem como propriedades independentes no JSON.</td></tr>
+            <tr><td><code>RequestCorrelationFilter</code></td><td>Um <span class="pill trace">traceId</span> curto por requisição, presente em todo log emitido enquanto ela é processada — inclusive de bibliotecas de terceiros.</td></tr>
+            <tr><td><code>@LogExecution</code></td><td>Log de entrada, saída e exceção de método via AOP, com um breadcrumb de <span class="pill chain">callChain</span> acumulando em chamadas aninhadas.</td></tr>
+            <tr><td><code>@Sensitive</code> / <code>LogMaskingUtil</code></td><td>Mascaramento central: nunca reflete entidade JPA nem coleção/mapa; nunca deixa senha, token etc. em claro.</td></tr>
+            <tr><td><code>AppLog</code></td><td>Log de evento de negócio no meio de um método, onde o AOP não alcança.</td></tr>
             <tr><td><code>CapturaLogAppender</code></td><td>Captura eventos de log em memória nos seus testes, sem depender de stdout.</td></tr>
           </tbody>
         </table>
@@ -602,7 +599,7 @@
     &lt;dependency&gt;
         &lt;groupId&gt;io.github.trilhalog&lt;/groupId&gt;
         &lt;artifactId&gt;trilha-log&lt;/artifactId&gt;
-        &lt;version&gt;0.2.0&lt;/version&gt;
+        &lt;version&gt;0.1.0&lt;/version&gt;
     &lt;/dependency&gt;
 &lt;/dependencies&gt;</code></pre>
       </div>
@@ -716,88 +713,7 @@ docker build \
         <figcaption>O <code>traceId</code> é gravado no MDC antes de qualquer filtro de segurança e acompanha todo o resto do processamento — inclusive logs emitidos por Hibernate, Spring Security e outras bibliotecas de terceiro, já que ele vive no MDC/ThreadContext, não em um wrapper de logger. É removido só no <code>finally</code>, depois do log de acesso.</figcaption>
       </figure>
 
-      <h3>Comprimento do traceId</h3>
-      <p>Por padrão o traceId gerado é um UUID sem hifens (32 chars hex). Para usar um traceId mais curto — compatível com o formato legado de 8 chars — configure:</p>
-      <div class="code">
-        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code>trilha-log:
-  correlation:
-    trace-id-length: 8  <span class="tok-com"># 0 = UUID completo (padrão)</span></code></pre>
-      </div>
-
-      <h3>Opt-out de IP do cliente</h3>
-      <p>O log de acesso inclui o IP por padrão. Em ambientes com requisitos LGPD/GDPR, desabilite:</p>
-      <div class="code">
-        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code>trilha-log:
-  correlation:
-    log-ip: false</code></pre>
-      </div>
-    </section>
-
-    <section id="trace-propagacao">
-      <span class="eyebrow">03 — Conceitos</span>
-      <h2>Propagação de traceId externo</h2>
-      <p>Quando a requisição chega com um cabeçalho de rastreamento, o filtro reutiliza aquele valor em vez de gerar um novo. Os cabeçalhos são inspecionados na ordem configurada — o primeiro presente e não vazio vence:</p>
-
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Cabeçalho</th><th>Formato</th></tr></thead>
-          <tbody>
-            <tr><td><code>traceparent</code></td><td>W3C — <code>00-&lt;traceId32&gt;-&lt;spanId&gt;-&lt;flags&gt;</code>. Extrai os 32 chars de traceId.</td></tr>
-            <tr><td><code>X-Request-ID</code></td><td>Valor direto (truncado a 32 chars).</td></tr>
-            <tr><td><code>X-Correlation-ID</code></td><td>Valor direto (truncado a 32 chars).</td></tr>
-            <tr><td><code>X-B3-TraceId</code></td><td>Zipkin B3 — valor direto.</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p>Para alterar a lista ou desativar completamente a propagação:</p>
-      <div class="code">
-        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code>trilha-log:
-  correlation:
-    incoming-trace-headers:
-      - traceparent    <span class="tok-com"># W3C — inspecionado primeiro</span>
-      - X-Request-ID   <span class="tok-com"># lista vazia desativa propagação</span></code></pre>
-      </div>
-    </section>
-
-    <section id="http-body">
-      <span class="eyebrow">03 — Conceitos</span>
-      <h2>Logging de corpo HTTP <span style="font-size:0.8em;font-weight:400;color:var(--ink-dim)">(opt-in)</span></h2>
-      <p>Desabilitado por padrão para não vazar dados sensíveis sem consentimento explícito. Quando habilitado, o corpo JSON da requisição é mascarado automaticamente pelo mesmo <code>LogMaskingUtil</code> — campos com nome sensível viram <code>"***"</code> antes do log.</p>
-
-      <div class="code">
-        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code>trilha-log:
-  correlation:
-    log-request-body: true    <span class="tok-com"># opt-in — false por padrão</span>
-    max-body-log-bytes: 2048  <span class="tok-com"># trunca payloads maiores</span></code></pre>
-      </div>
-
-      <div class="callout warn">
-        <span class="callout-label">Requer Jackson</span>
-        <p>O mascaramento do corpo usa <code>ObjectMapper</code> para parsear o JSON. Se <code>jackson-databind</code> não estiver no classpath, o corpo não é logado mesmo com <code>log-request-body: true</code> — nenhuma exceção, nenhuma quebra.</p>
-      </div>
-    </section>
-
-    <section id="micrometer">
-      <span class="eyebrow">03 — Conceitos</span>
-      <h2>Integração com Micrometer Tracing</h2>
-      <p>Quando <code>micrometer-tracing</code> está no classpath e há um span ativo (ex.: Zipkin, OpenTelemetry), o <code>RequestCorrelationFilter</code> usa o <code>traceId</code> do span corrente em vez de gerar um novo, e também coloca o <code>spanId</code> no MDC:</p>
-
-      <div class="code">
-        <div class="code-head"><span>saída JSON — com Micrometer ativo</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code>{"timestamp":"...","level":"INFO","traceId":"4bf92f3577b34da6a3ce929d0e0e4736","spanId":"00f067aa0ba902b7","callChain":"...","message":"..."}</code></pre>
-      </div>
-
-      <p>A integração usa <em>capability detection</em>: se o Micrometer não estiver no classpath, o código nem é carregado — sem <code>NoClassDefFoundError</code>. Se estiver mas não houver span ativo, gera o traceId normalmente.</p>
-
-      <div class="callout note">
-        <span class="callout-label">Sem dependência obrigatória</span>
-        <p>O trilha-log não declara <code>micrometer-tracing</code> como dependência obrigatória. Quem usa Spring Boot Actuator + Zipkin ou OpenTelemetry já recebe a integração automaticamente.</p>
-      </div>
+      <p>Nunca loga corpo ou parâmetros da requisição, em nenhum profile — risco de vazar dado sensível sem mascaramento.</p>
     </section>
 
     <section id="log-execution">
@@ -813,7 +729,6 @@ docker build \
             <tr><td><code>logArgs</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Loga os argumentos (mascarados).</td></tr>
             <tr><td><code>logReturn</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Loga o retorno (mascarado).</td></tr>
             <tr><td><code>logException</code></td><td><code>boolean</code></td><td><code>true</code></td><td>Loga em <code>ERROR</code> antes de relançar.</td></tr>
-            <tr><td><code>excludeReturnTypes</code></td><td><code>Class&lt;?&gt;[]</code></td><td><code>{}</code></td><td>Omite o log de retorno quando o tipo do valor retornado for um dos listados — útil para <code>ResponseEntity</code> e outros tipos verbosos.</td></tr>
           </tbody>
         </table>
       </div>
@@ -871,30 +786,6 @@ docker build \
         </svg>
         <figcaption>O <code>callChain</code> acumula uma entrada por chamada aninhada (push/pop via MDC). Se <code>AutenticacaoService.autenticar()</code> lançar, o aspecto loga em <code>ERROR</code> e relança o <code>Throwable</code> original sem embrulhar — a mesma exceção sobe pela pilha, preservando a stack trace completa.</figcaption>
       </figure>
-
-      <h3>Omitindo retorno para tipos específicos</h3>
-      <p>Em controllers que retornam <code>ResponseEntity</code>, o log de retorno pode ser verboso e redundante com o log de acesso do filtro. Use <code>excludeReturnTypes</code> para suprimir só esses casos:</p>
-      <div class="code">
-        <div class="code-head"><span>PedidoController.java</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code><span class="tok-tag">@LogExecution</span>(excludeReturnTypes = {ResponseEntity.<span class="tok-kw">class</span>})
-<span class="tok-tag">@RestController</span>
-<span class="tok-kw">public class</span> PedidoController {
-
-    <span class="tok-kw">public</span> ResponseEntity&lt;PedidoDto&gt; buscar(<span class="tok-kw">long</span> id) {
-        <span class="tok-com">// entrada e exceção logados normalmente; retorno omitido</span>
-        ...
-    }
-}</code></pre>
-      </div>
-
-      <h3>Limite de frames no callChain</h3>
-      <p>Em stacks profundas, o <code>callChain</code> pode crescer indefinidamente. Configure um limite para manter o contexto mais recente — os frames antigos são substituídos por <code>"... &gt;"</code>:</p>
-      <div class="code">
-        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code>trilha-log:
-  aspect:
-    max-call-chain-frames: 5  <span class="tok-com"># 0 = sem limite (padrão)</span></code></pre>
-      </div>
     </section>
 
     <section id="mascaramento">
@@ -910,17 +801,6 @@ docker build \
         <li><strong><code>Collection</code>, <code>Map</code> ou array</strong> → vira só o nome do tipo.</li>
         <li><strong>Qualquer outro objeto</strong> (DTO, record) → reflection rasa: campo <code>@Sensitive</code> ou com nome sensível vira <code>"***"</code>; o resto é formatado como <code>NomeDaClasse{campo=valor}</code>.</li>
       </ol>
-
-      <h3>@Sensitive em parâmetros de método</h3>
-      <p>Além de campos de DTO, <code>@Sensitive</code> pode ser aplicada diretamente em parâmetros de método anotados com <code>@LogExecution</code> — o aspecto mascara o argumento inteiro, independente do nome ou tipo:</p>
-      <div class="code">
-        <div class="code-head"><span>AutenticacaoService.java</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code><span class="tok-tag">@LogExecution</span>
-<span class="tok-kw">public</span> <span class="tok-kw">boolean</span> autenticar(String usuario, <span class="tok-tag">@Sensitive</span> String senha) {
-    <span class="tok-com">// log de entrada: autenticar(usuario=kevin, senha=***)</span>
-    ...
-}</code></pre>
-      </div>
 
       <h3>Palavras-chave padrão</h3>
       <p><code>senha</code>, <code>password</code>, <code>token</code>, <code>secret</code>, <code>apikey</code>, <code>api-key</code>, <code>authorization</code>, <code>chave</code> — configuráveis via <code>application.yml</code>:</p>
@@ -971,30 +851,9 @@ public class AutenticacaoService {
 
       <p><code>AppLog</code> usa <code>StackWalker</code> para atribuir o log à classe que de fato chamou — não a própria <code>AppLog</code> — chamado diretamente dentro de cada método público (nunca via helper privado extra, senão o frame conta errado).</p>
 
-      <h3>Campos MDC estruturados</h3>
-      <p>Para emitir campos indexáveis independentes no JSON (pesquisáveis no Elasticsearch/OpenSearch/Loki), use as sobrecargas com <code>Map&lt;String, ?&gt;</code>. Os campos são adicionados ao MDC antes do log e removidos no <code>finally</code>:</p>
-
-      <div class="code">
-        <div class="code-head"><span>PedidoService.java</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code><span class="tok-com">// campos simples no MDC — aparecem como propriedades no JSON</span>
-appLog.info(<span class="tok-str">"pagamento confirmado"</span>, Map.of(
-    <span class="tok-str">"pedidoId"</span>, pedido.getId(),
-    <span class="tok-str">"valor"</span>,    pedido.getValor()
-));
-
-<span class="tok-com">// contexto de objeto + campos MDC combinados</span>
-appLog.warn(<span class="tok-str">"estoque baixo"</span>, produto, Map.of(<span class="tok-str">"estoqueAtual"</span>, qtd));</code></pre>
-      </div>
-
-      <div class="code">
-        <div class="code-head"><span>saída JSON</span><button class="copy-btn" data-copy>Copiar</button></div>
-        <pre><code>{"timestamp":"...","level":"INFO","traceId":"...","callChain":"PedidoService.confirmar",
- "pedidoId":"42","valor":"199.90","message":"pagamento confirmado"}</code></pre>
-      </div>
-
       <div class="callout warn">
         <span class="callout-label">Armadilha comum</span>
-        <p>Nunca passe <code>Map.of(...)</code> como argumento <em>context</em> (o parâmetro <code>Object</code>). O mascaramento trata <code>Map</code> como "não reflete" — o resultado vira só o nome da classe, escondendo o dado. Para campos estruturados, use a sobrecarga <code>(String, Map&lt;String, ?&gt;)</code> descrita acima; para um único objeto rico, use um <code>record</code> local.</p>
+        <p>Nunca passe <code>Map.of(...)</code> como contexto de múltiplos campos. O mascaramento trata <code>Map</code> como "não reflete" (mesma proteção contra coleção lazy) — o resultado vira só o nome da classe do <code>Map</code>, escondendo justamente o dado que você queria logar. Para contexto com mais de um campo, use um <code>record</code> local pequeno.</p>
       </div>
     </section>
 
@@ -1006,13 +865,7 @@ appLog.warn(<span class="tok-str">"estoque baixo"</span>, produto, Map.of(<span 
           <thead><tr><th>Propriedade</th><th>Default</th><th>Efeito</th></tr></thead>
           <tbody>
             <tr><td><code>trilha-log.correlation.enabled</code></td><td><code>true</code></td><td>Liga/desliga o <code>RequestCorrelationFilter</code>.</td></tr>
-            <tr><td><code>trilha-log.correlation.log-ip</code></td><td><code>true</code></td><td>Inclui o IP do cliente no log de acesso. Desabilitar em ambientes com requisitos LGPD/GDPR.</td></tr>
-            <tr><td><code>trilha-log.correlation.incoming-trace-headers</code></td><td><code>[traceparent, X-Request-ID, X-Correlation-ID, X-B3-TraceId]</code></td><td>Cabeçalhos inspecionados em ordem para reutilizar traceId externo. Lista vazia desativa a propagação.</td></tr>
-            <tr><td><code>trilha-log.correlation.trace-id-length</code></td><td><code>0</code></td><td>Comprimento do traceId gerado. <code>0</code> = UUID completo (32 chars hex). Valores positivos truncam. Não afeta traceIds propagados de cabeçalhos.</td></tr>
-            <tr><td><code>trilha-log.correlation.log-request-body</code></td><td><code>false</code></td><td>Opt-in: loga o corpo JSON da requisição com mascaramento automático. Requer Jackson no classpath.</td></tr>
-            <tr><td><code>trilha-log.correlation.max-body-log-bytes</code></td><td><code>2048</code></td><td>Limite em bytes do corpo logado. Payloads maiores são truncados.</td></tr>
             <tr><td><code>trilha-log.aspect.enabled</code></td><td><code>true</code></td><td>Liga/desliga o <code>LogExecutionAspect</code>.</td></tr>
-            <tr><td><code>trilha-log.aspect.max-call-chain-frames</code></td><td><code>0</code></td><td>Máximo de frames no <code>callChain</code>. <code>0</code> = sem limite. Ao ultrapassar, frames antigos viram <code>"... &gt;"</code>.</td></tr>
             <tr><td><code>trilha-log.masking.extra-keywords</code></td><td><code>[]</code></td><td>Palavras-chave somadas às padrão para mascaramento por nome.</td></tr>
           </tbody>
         </table>
@@ -1106,15 +959,6 @@ appLog.warn(<span class="tok-str">"estoque baixo"</span>, produto, Map.of(<span 
 
       <h3>E se meu projeto não tiver Servlet API no classpath?</h3>
       <p><code>RequestCorrelationFilter</code> é <code>@ConditionalOnClass(Filter.class)</code> — em uma aplicação sem Servlet API (um worker, por exemplo), o bean simplesmente não é criado, sem erro.</p>
-
-      <h3>O log de corpo HTTP funciona com qualquer Content-Type?</h3>
-      <p>Não. O <code>log-request-body</code> só processa corpos <code>application/json</code>. Para outros tipos o corpo é ignorado silenciosamente — sem erro, sem log parcial.</p>
-
-      <h3>Micrometer Tracing e propagação de cabeçalhos se sobrepõem?</h3>
-      <p>Sim, com precedência bem definida: se Micrometer Tracing estiver ativo e houver span corrente, ele vence. Caso contrário, os cabeçalhos de entrada (<code>traceparent</code>, etc.) são inspecionados. Se nenhum estiver presente, um traceId é gerado localmente.</p>
-
-      <h3>excludeReturnTypes afeta o log de exceção?</h3>
-      <p>Não. A lista só suprime o log de retorno normal (<code>returning</code>). Exceções continuam sendo logadas em <code>ERROR</code> independentemente.</p>
     </section>
 
     <section id="contribuindo">

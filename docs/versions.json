@@ -1,0 +1,7 @@
+{
+  "latest": "0.2",
+  "versions": [
+    { "version": "0.2", "label": "v0.2 (mais recente)", "path": "/trilha-log/" },
+    { "version": "0.1", "label": "v0.1", "path": "/trilha-log/v0.1/" }
+  ]
+}
