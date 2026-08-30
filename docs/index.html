@@ -530,6 +530,7 @@
       <ul>
         <li><a href="#visao-geral">Visão geral</a></li>
         <li><a href="#instalacao">Instalação</a></li>
+        <li><a href="#casos-de-uso">Casos de uso</a></li>
       </ul>
     </div>
     <div class="sidenav-group">
@@ -661,10 +662,55 @@ docker build \
       <p><code>actions/setup-java</code> com <code>server-id: github</code> gera o <code>&lt;server&gt;</code> do <code>settings.xml</code> do runner automaticamente, usando o <code>secrets.GITHUB_TOKEN</code> padrão do workflow — nenhum PAT extra precisa ser cadastrado.</p>
     </section>
 
+    <section id="casos-de-uso" class="wide" style="max-width: 56rem;">
+      <span class="eyebrow">02 — Começando</span>
+      <h2>Casos de uso</h2>
+      <p class="lede">Cada feature isolada já está documentada nas seções seguintes. Aqui, quatro cenários reais combinando as peças — pra situar o "por quê" antes do "como".</p>
+
+      <h3>Microsserviços atrás de um gateway, com tracing distribuído</h3>
+      <p>Seu serviço é chamado por um API gateway ou por outro microsserviço que já participa de um trace distribuído (Zipkin, OpenTelemetry, ou só um gateway que injeta <code>X-Request-ID</code>). Você quer que o <code>traceId</code> dos seus logs seja <strong>o mesmo</strong> que já existe na cadeia — não um novo, desconectado.</p>
+      <p>Não precisa configurar nada: <code>RequestCorrelationFilter</code> já inspeciona <code>traceparent</code>/<code>X-Request-ID</code>/<code>X-Correlation-ID</code>/<code>X-B3-TraceId</code> por padrão (veja <a href="#trace-propagacao">Propagação de traceId</a>) e reaproveita o valor recebido em vez de gerar um novo. Se além disso o classpath tem <code>micrometer-tracing</code> com um span ativo, o <code>spanId</code> também aparece no MDC (veja <a href="#micrometer">Micrometer Tracing</a>) — o mesmo ID que você vê no Zipkin/Jaeger aparece nos seus logs JSON, sem fazer join manual entre dois sistemas.</p>
+
+      <h3>Aplicação sob LGPD/GDPR</h3>
+      <p>Seus logs não podem carregar dado pessoal identificável além do necessário — nem IP do cliente, nem CPF/RG em texto plano, nem senha em nenhuma hipótese.</p>
+      <div class="code">
+        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>trilha-log:
+  correlation:
+    log-ip: false          <span class="tok-com"># remove o IP do log de acesso</span>
+  masking:
+    extra-keywords:
+      - cpf
+      - rg</code></pre>
+      </div>
+      <p>Some isso com <code>@Sensitive</code> nos parâmetros de método que recebem valor sensível cru (não embrulhado em DTO) — veja <a href="#mascaramento">Mascaramento</a> — e você cobre os três vetores mais comuns de vazamento de PII em log: IP, documento, e parâmetro solto.</p>
+
+      <h3>Debugando uma integração de terceiro instável em produção</h3>
+      <p>Um parceiro externo (gateway de pagamento, provedor de frete) está devolvendo erro intermitente e você precisa ver o payload exato que disparou o problema — sem deixar log de corpo de requisição ligado o tempo todo.</p>
+      <div class="code">
+        <div class="code-head"><span>application-investigacao.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>trilha-log:
+  correlation:
+    log-request-body: true
+    max-body-log-bytes: 4096</code></pre>
+      </div>
+      <p>Ative num profile próprio (<code>SPRING_PROFILES_ACTIVE=investigacao</code>), reproduza o problema, correlacione pelo <code>traceId</code> daquela requisição específica no log de acesso, e desligue de novo — o corpo já sai mascarado automaticamente (campos com nome sensível viram <code>"***"</code> mesmo dentro do JSON logado), então mesmo habilitado por um tempo curto não expõe segredo.</p>
+
+      <h3>Processamento em lote com muitas chamadas aninhadas</h3>
+      <p>Um job noturno itera milhares de registros, cada um passando por uma cadeia de 5+ services com <code>@LogExecution</code>. Sem limite, o <code>callChain</code> de um item processado no fim do lote fica enorme e ilegível; e você quer métricas por item (quantos falharam, qual o valor processado) pesquisáveis num dashboard, não só texto solto no log.</p>
+      <div class="code">
+        <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
+        <pre><code>trilha-log:
+  aspect:
+    max-call-chain-frames: 4  <span class="tok-com"># mantém só os 4 frames mais recentes</span></code></pre>
+      </div>
+      <p>Combine com <code>AppLog</code> e campos MDC estruturados (veja <a href="#app-log">Eventos de negócio</a>) pra emitir um evento indexável por item processado — <code>appLog.info("item processado", Map.of("pedidoId", id, "status", status))</code> — em vez de tentar extrair isso de uma string de log livre depois.</p>
+    </section>
+
     <section id="trace-id">
       <span class="eyebrow">03 — Conceitos</span>
       <h2>Correlação de requisição <span class="pill trace">traceId</span></h2>
-      <p><code>RequestCorrelationFilter</code> gera um <code>traceId</code> curto (8 caracteres) e coloca no MDC/ThreadContext antes de chamar o resto da cadeia de filtros. Roda com <code>@Order(HIGHEST_PRECEDENCE)</code> — antes de qualquer filtro de segurança da aplicação consumidora.</p>
+      <p><code>RequestCorrelationFilter</code> gera um <code>traceId</code> (por padrão, um UUID completo de 32 caracteres — configurável, veja abaixo) e coloca no MDC/ThreadContext antes de chamar o resto da cadeia de filtros. Roda com <code>@Order(HIGHEST_PRECEDENCE)</code> — antes de qualquer filtro de segurança da aplicação consumidora.</p>
 
       <figure class="diagram">
         <svg viewBox="0 0 860 230" role="img" aria-label="Uma requisição HTTP passa pelo RequestCorrelationFilter, que gera o traceId e o grava no MDC antes dos filtros de segurança, controller e services; o traceId acompanha todo o caminho e é removido do MDC só no finally, depois da resposta.">
@@ -740,6 +786,11 @@ docker build \
       <h2>Propagação de traceId externo</h2>
       <p>Quando a requisição chega com um cabeçalho de rastreamento, o filtro reutiliza aquele valor em vez de gerar um novo. Os cabeçalhos são inspecionados na ordem configurada — o primeiro presente e não vazio vence:</p>
 
+      <div class="callout note">
+        <span class="callout-label">Quando usar</span>
+        <p>Seu serviço nunca é a primeira parada de uma requisição — está atrás de um API gateway, um BFF, ou é chamado por outro microsserviço. Sem propagação, cada serviço geraria seu próprio <code>traceId</code> desconectado, e correlacionar uma falha através da cadeia viraria trabalho manual de cruzar timestamps. Com propagação, o mesmo ID atravessa todos os serviços — um <code>grep</code> pelo <code>traceId</code> no agregador de log já traz a história completa.</p>
+      </div>
+
       <div class="table-wrap">
         <table>
           <thead><tr><th>Cabeçalho</th><th>Formato</th></tr></thead>
@@ -768,6 +819,11 @@ docker build \
       <h2>Logging de corpo HTTP <span style="font-size:0.8em;font-weight:400;color:var(--ink-dim)">(opt-in)</span></h2>
       <p>Desabilitado por padrão para não vazar dados sensíveis sem consentimento explícito. Quando habilitado, o corpo JSON da requisição é mascarado automaticamente pelo mesmo <code>LogMaskingUtil</code> — campos com nome sensível viram <code>"***"</code> antes do log.</p>
 
+      <div class="callout note">
+        <span class="callout-label">Quando usar</span>
+        <p>Um parceiro externo ou cliente manda um payload malformado e o erro só reproduz em produção — logar <code>request.getParameter(...)</code> um por um não escala, e reproduzir localmente sem o payload exato é chute. Ligue temporariamente (idealmente num profile separado, não no <code>application.yml</code> comum), capture o <code>traceId</code> da requisição problemática no log de acesso, e desligue de novo — não é pensado pra ficar ligado o tempo todo em produção.</p>
+      </div>
+
       <div class="code">
         <div class="code-head"><span>application.yml</span><button class="copy-btn" data-copy>Copiar</button></div>
         <pre><code>trilha-log:
@@ -786,6 +842,11 @@ docker build \
       <span class="eyebrow">03 — Conceitos</span>
       <h2>Integração com Micrometer Tracing</h2>
       <p>Quando <code>micrometer-tracing</code> está no classpath e há um span ativo (ex.: Zipkin, OpenTelemetry), o <code>RequestCorrelationFilter</code> usa o <code>traceId</code> do span corrente em vez de gerar um novo, e também coloca o <code>spanId</code> no MDC:</p>
+
+      <div class="callout note">
+        <span class="callout-label">Quando usar</span>
+        <p>Você já tem uma stack de tracing distribuído (Zipkin, Jaeger, Grafana Tempo) e quer sair de "encontrei o erro no log, agora preciso adivinhar qual trace no Zipkin corresponde a ele" — sem essa integração, o <code>traceId</code> do log e o trace ID do backend de tracing são dois IDs diferentes que não se correlacionam. Com ela, é o mesmo ID nos dois lugares: acha o log, cola o <code>traceId</code> na busca do Zipkin, vê o span completo.</p>
+      </div>
 
       <div class="code">
         <div class="code-head"><span>saída JSON — com Micrometer ativo</span><button class="copy-btn" data-copy>Copiar</button></div>
