@@ -23,4 +23,6 @@ public @interface LogExecution {
     boolean logReturn() default true;
 
     boolean logException() default true;
+
+    Class<?>[] excludeReturnTypes() default {};
 }
