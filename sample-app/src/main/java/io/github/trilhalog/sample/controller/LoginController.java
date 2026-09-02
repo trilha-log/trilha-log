@@ -18,6 +18,7 @@ public class LoginController {
         this.loginService = loginService;
     }
 
+    @SanitizeHtml
     @PostMapping("/login")
     public String login(@RequestBody LoginRequest request) {
         return loginService.login(request);
